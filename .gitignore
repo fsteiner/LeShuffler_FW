@@ -17,3 +17,14 @@ Release/
 
 # OS files
 .DS_Store
+
+# CubeMX / Hardware Abstraction leftovers
+# These are backups created when you migrate versions
+MigrationBackup/
+RemoteSystemsTempFiles/
+
+# Log files
+*.log
+
+# If you use the Internal Bootloader/ST-LINK tools
+*.stlink
