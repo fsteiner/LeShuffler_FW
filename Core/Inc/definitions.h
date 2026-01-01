@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 // VERSION
-#define VERSION "LeShuffler FW version 1.0"
+#define VERSION "LeShuffler FW version 1.0.1"
 
 // EERAM status
 #define FW_LS_TESTED 	0xABBA
