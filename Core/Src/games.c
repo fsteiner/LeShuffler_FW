@@ -3157,7 +3157,7 @@ return_code_t deal_n_cards(void)
 		if (user_input == DO_RECYCLE)
 			goto _LOADING_LOOP;
 
-		if (user_input == CONTINUE && game_state.current_stage)
+		if (user_input == CONTINUE)
 		{
 			game_rules.n_hole_cards = n_cards;
 			game_state.n_cards_dealt = 0;
@@ -3166,7 +3166,7 @@ return_code_t deal_n_cards(void)
 			ret_val = discharge_cards(game_rules);
 		}
 	}
-	while (user_input == LS_OK && ret_val == LS_OK);
+	while (user_input == CONTINUE && ret_val == LS_OK);
 
 	// De-mask user input if all OK
 	if (ret_val == LS_OK)
