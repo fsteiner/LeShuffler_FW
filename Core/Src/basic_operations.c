@@ -207,9 +207,10 @@ return_code_t cards_in_shoe(void)
 {
 	bool reading = read_sensor(SHOE_SENSOR);
 	bool previous_reading;
+	uint32_t shoe_debounce_time = 20; // ms
 	do
 	{
-		HAL_Delay(DEBOUNCE_TIME);
+		HAL_Delay(shoe_debounce_time);
 		previous_reading = reading;
 		reading = read_sensor(SHOE_SENSOR);
 	}
@@ -269,7 +270,7 @@ void wait_pickup_shoe(uint8_t n_cards)
 		flap_close();
 	}
 
-	clear_message(GRAPHIC_ERROR);
+	clear_text();
 	clear_icons();
 	clear_picture();
 
