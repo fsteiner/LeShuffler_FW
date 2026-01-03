@@ -28,3 +28,6 @@ RemoteSystemsTempFiles/
 
 # If you use the Internal Bootloader/ST-LINK tools
 *.stlink
+
+# Windows executables (build with PyInstaller from source)
+*.exe
