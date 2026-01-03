@@ -121,7 +121,9 @@ int main(void)
   application_valid = ((app_stack & 0xFFF00000) == 0x20000000 ||
                        (app_stack & 0xFFF00000) == 0x24000000) ? 1 : 0;
 
-  // Erase flash BEFORE USB init (USB dies during erase operations)
+  // v2.1: Only erase at entry if app is ALREADY invalid
+  // If bootloader_requested && app valid, wait for START packet to erase
+  // This allows user to cancel (power cycle) without losing firmware
   if (bootloader_requested || !application_valid) {
       // 3 short beeps = entering bootloader mode
       for (int i = 0; i < 3; i++) {
@@ -131,8 +133,11 @@ int main(void)
           HAL_Delay(100);
       }
 
-      // Erase application flash (sectors 1-7, 896KB)
-      EraseApplicationFlash();
+      // Only erase if app is ALREADY invalid (nothing to lose)
+      // If app is valid, erase happens on START packet in ProcessFirmwarePacket()
+      if (!application_valid) {
+          EraseApplicationFlash();
+      }
 
       // 1 long beep = ready for firmware transfer
       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
