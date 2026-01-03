@@ -414,6 +414,7 @@ int main(void)
 
 		if ((current_menu.n_items == 0)
 				&& (current_menu.code != DOUBLE_DECK_SHUFFLE)
+				&& (current_menu.code != EMPTY)
 				&& (machine_state.double_deck == DOUBLE_DECK_STATE))
 		{
 			// Assert if some slots have 2 cards
