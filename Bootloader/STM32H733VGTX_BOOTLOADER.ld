@@ -157,5 +157,12 @@ SECTIONS
     libgcc.a ( * )
   }
 
+  /* Bootloader version info at fixed address (end of bootloader flash) */
+  /* Application firmware can read version from 0x0800BFF0 */
+  .bootloader_version 0x0800BFF0 :
+  {
+    KEEP(*(.bootloader_version))
+  } >FLASH
+
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }

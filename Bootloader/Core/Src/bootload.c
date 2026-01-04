@@ -8,6 +8,25 @@
 #include "bootload.h"
 #include <string.h>
 
+// ============================================================================
+// Bootloader Version Info (stored at fixed flash address 0x0800BFF0)
+// Application firmware can read this directly from flash
+// ============================================================================
+__attribute__((section(".bootloader_version"), used))
+const struct {
+    uint16_t version;      // Major.Minor (0x0201 = v2.1)
+    uint16_t reserved;     // For future use
+    uint32_t magic;        // 0x424C5652 = "BLVR" (Bootloader Version)
+    uint32_t build_date;   // Reserved for build timestamp
+    uint32_t checksum;     // Reserved
+} bootloader_version_info = {
+    .version = BOOTLOADER_VERSION,
+    .reserved = 0,
+    .magic = 0x424C5652,   // "BLVR"
+    .build_date = 0,
+    .checksum = 0
+};
+
 // RTC Backup Register for bootloader flag (survives reset)
 #define RTC_BACKUP_BOOTLOADER_FLAG  0  // Use register 0
 #define BOOTLOADER_MAGIC_VALUE      0xDEADBEEF

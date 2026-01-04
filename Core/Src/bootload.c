@@ -5,6 +5,7 @@
 
 #include "stm32h7xx_hal.h"
 #include "utilities.h"
+#include "bootload.h"
 
 /**
  * @brief External peripheral handle declarations
@@ -273,6 +274,23 @@ return_code_t EarlyBootloaderCheck(void)
     return ret_val;
 }
 
+/**
+ * @brief Get bootloader version from flash
+ * Reads version info stored at fixed address 0x0800BFF0 by bootloader
+ * @return Version as uint16_t (major << 8 | minor), or 0 if not found/old bootloader
+ * Example: 0x0201 = v2.1, 0x0100 = v1.0
+ */
+uint16_t GetBootloaderVersion(void)
+{
+    // Version struct layout at 0x0800BFF0:
+    // uint16_t version (offset 0)
+    // uint16_t reserved (offset 2)
+    // uint32_t magic "BLVR" (offset 4)
 
-
-
+    uint32_t magic = *(volatile uint32_t*)(BOOTLOADER_VERSION_ADDR + 4);
+    if (magic != BOOTLOADER_VERSION_MAGIC) {
+        // Old bootloader without version info, or erased flash
+        return 0;
+    }
+    return *(volatile uint16_t*)BOOTLOADER_VERSION_ADDR;
+}

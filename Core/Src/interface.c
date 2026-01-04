@@ -6,6 +6,7 @@
  */
 
 #include <basic_operations.h>
+#include <bootload.h>
 #include <buttons.h>
 #include <fonts.h>
 #include <games.h>
@@ -2135,8 +2136,20 @@ void prompt_uid(void)
 void prompt_firmware_version(void)
 {
 	uint16_t row = 4;
+	char bl_version_str[32];
 
 	prompt_text(VERSION, row++, LCD_REGULAR_FONT);
+
+	// Display bootloader version
+	uint16_t bl_ver = GetBootloaderVersion();
+	if (bl_ver != 0) {
+		uint8_t major = bl_ver >> 8;
+		uint8_t minor = bl_ver & 0xFF;
+		snprintf(bl_version_str, sizeof(bl_version_str), "Bootloader v%d.%d", major, minor);
+	} else {
+		snprintf(bl_version_str, sizeof(bl_version_str), "Bootloader v1.0");
+	}
+	prompt_text(bl_version_str, row++, LCD_REGULAR_FONT);
 
 	return;
 
