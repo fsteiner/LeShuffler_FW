@@ -408,14 +408,14 @@ int main(void)
 
 		/*
 		 * If double deck shuffling was interrupted, and we are attempting an
-		 * action other than shuffling 2 decks with more than 1 card in some slots
-		 * empty carousel
+		 * action - other than shuffling 2 decks or emptying - with more than 1 card
+		 * in any slots, empty carousel
 		 */
 
 		if ((current_menu.n_items == 0)
+				&& (machine_state.double_deck == DOUBLE_DECK_STATE)
 				&& (current_menu.code != DOUBLE_DECK_SHUFFLE)
-				&& (current_menu.code != EMPTY)
-				&& (machine_state.double_deck == DOUBLE_DECK_STATE))
+				&& (current_menu.code != EMPTY))
 		{
 			// Assert if some slots have 2 cards
 			bool SDS;
@@ -654,14 +654,26 @@ int main(void)
 					break;
 
 				case FIRMWARE_UPDATE:
+					// General warning
 					clear_text();
 					extern icon_set_t icon_set_check;
-					user_input =
-							prompt_interface(WARNING, CUSTOM_MESSAGE,
-									"Enter firmware update mode?\n(Firmware will be erased)",
-									icon_set_check, ICON_BACK, BUTTON_PRESS);
+					user_input = prompt_interface(WARNING, CUSTOM_MESSAGE,
+							"Firmware will be entirely erased\nAre you sure?",
+							icon_set_check, ICON_BACK, BUTTON_PRESS);
 					if (user_input == LS_OK)
-						EnterBootloaderMode();
+					{
+						// Check safety code
+						const uint16_t code_len = 5;
+						char safety_code[] = "AKQJT";
+						char code_input[] =  "@@@@@";
+						int16_t m_row = 1;
+
+						clear_message(TEXT_ERROR);
+						prompt_text("Enter safety code:", m_row, LCD_BOLD_FONT);
+						name_input(code_input, code_len);
+						if (strcmp(code_input, safety_code) == 0)
+							EnterBootloaderMode();
+					}
 					reset_btns();
 					break;
 
