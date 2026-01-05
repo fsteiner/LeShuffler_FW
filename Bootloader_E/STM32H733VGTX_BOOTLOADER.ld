@@ -22,12 +22,13 @@ _Min_Heap_Size = 0x200;      /* required amount of heap  */
 _Min_Stack_Size = 0x2000;    /* 8KB stack - increased for USB operations */
 
 /* Specify the memory areas */
-/* BOOTLOADER at 0x08000000, only 16KB (0x4000 bytes) */
+/* BOOTLOADER at 0x08000000, full sector 0 (128KB) */
+/* Encrypted bootloader needs more space for crypto (micro-ecc, AES, SHA-256) */
 MEMORY
 {
   ITCMRAM (xrw)    : ORIGIN = 0x00000000,   LENGTH = 64K
   DTCMRAM (xrw)    : ORIGIN = 0x20000000,   LENGTH = 128K
-  FLASH    (rx)    : ORIGIN = 0x08000000,   LENGTH = 48K    /* Bootloader: 48KB */
+  FLASH    (rx)    : ORIGIN = 0x08000000,   LENGTH = 128K   /* Bootloader: full 128KB sector */
   RAM_D1  (xrw)    : ORIGIN = 0x24000000,   LENGTH = 320K
   RAM_D2  (xrw)    : ORIGIN = 0x30000000,   LENGTH = 32K
   RAM_D3  (xrw)    : ORIGIN = 0x38000000,   LENGTH = 16K
@@ -157,9 +158,9 @@ SECTIONS
     libgcc.a ( * )
   }
 
-  /* Bootloader version info at fixed address (end of bootloader flash) */
-  /* Application firmware can read version from 0x0800BFF0 */
-  .bootloader_version 0x0800BFF0 :
+  /* Bootloader version info at fixed address (end of 128KB bootloader sector) */
+  /* Application firmware can read version from 0x0801FFF0 */
+  .bootloader_version 0x0801FFF0 :
   {
     KEEP(*(.bootloader_version))
   } >FLASH

@@ -84,3 +84,39 @@ int32_t Crypto_DecryptFirmwareBlock(const uint8_t *encrypted_block,
     }
     return result;
 }
+
+/* Incremental SHA-256 hashing for signature verification */
+static uint8_t hash_started = 0;
+
+int32_t Crypto_SHA256_Start(void) {
+    hhash.Init.DataType = HASH_DATATYPE_8B;
+    if (HAL_HASH_Init(&hhash) != HAL_OK) return CRYPTO_ERROR;
+    hash_started = 1;
+    return CRYPTO_OK;
+}
+
+int32_t Crypto_SHA256_Update(const uint8_t *data, uint32_t length) {
+    if (!hash_started) return CRYPTO_ERROR;
+    if (length == 0) return CRYPTO_OK;
+    if (HAL_HASHEx_SHA256_Accmlt(&hhash, (uint8_t*)data, length) != HAL_OK) {
+        return CRYPTO_ERROR;
+    }
+    return CRYPTO_OK;
+}
+
+int32_t Crypto_SHA256_Finish(uint8_t *hash) {
+    if (!hash_started) return CRYPTO_ERROR;
+    hash_started = 0;
+    if (HAL_HASHEx_SHA256_Accmlt_End(&hhash, NULL, 0, hash, HAL_MAX_DELAY) != HAL_OK) {
+        return CRYPTO_ERROR;
+    }
+    return CRYPTO_OK;
+}
+
+int32_t Crypto_ECDSA_VerifyHash(const uint8_t *hash, const uint8_t *signature) {
+    const struct uECC_Curve_t *curve = uECC_secp256r1();
+    if (uECC_verify(ECDSA_PUBLIC_KEY, hash, SHA256_DIGEST_SIZE, signature, curve)) {
+        return CRYPTO_OK;
+    }
+    return CRYPTO_INVALID_SIG;
+}

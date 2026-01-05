@@ -6,6 +6,7 @@
 
 #include "stm32h7xx_hal.h"
 #include "bootload.h"
+#include "crypto.h"
 #include <string.h>
 
 // ============================================================================
@@ -467,6 +468,15 @@ static uint32_t fw_received_bytes = 0;
 // No large RAM buffer needed - just enough for one packet
 static uint8_t packet_buffer[288];  // 256 bytes + padding to 32-byte boundary
 
+// ============================================================================
+// Encrypted Firmware Update State (v3.0)
+// ============================================================================
+static uint8_t encrypted_mode = 0;           // 1 if processing encrypted .sfu
+static SFU_Header_t sfu_header;              // Stored SFU header
+static uint8_t current_iv[AES_IV_SIZE];      // Current IV for CBC decryption
+static uint32_t enc_received_bytes = 0;      // Encrypted bytes received
+static uint8_t decrypted_buffer[256];        // Buffer for decrypted data
+
 /**
  * @brief Process received firmware packet from USB CDC
  * @param packet Pointer to received packet
@@ -609,6 +619,188 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
 
             return 0;
 
+        // ====================================================================
+        // Encrypted Firmware Update Packets (v3.0)
+        // ====================================================================
+
+        case PACKET_TYPE_ENC_START:
+            // Encrypted firmware update - packet contains SFU header
+            {
+                // Verify we have enough data for header
+                if (packet->length < sizeof(SFU_Header_t)) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                // Copy and validate SFU header
+                memcpy(&sfu_header, packet->data, sizeof(SFU_Header_t));
+
+                // Check magic
+                if (sfu_header.magic != SFU_MAGIC) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                // Validate header (checks CRC, not signature yet - signature is over encrypted data)
+                // For now, just check basic sanity
+                if (sfu_header.firmware_size == 0 || sfu_header.firmware_size > (896 * 1024)) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+                if (sfu_header.original_size == 0 || sfu_header.original_size > (896 * 1024)) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                // Initialize encrypted mode
+                encrypted_mode = 1;
+                enc_received_bytes = 0;
+                fw_total_bytes = sfu_header.original_size;  // Decrypted size
+                fw_received_bytes = 0;
+                fw_update_state = FW_RECEIVING;
+
+                // Copy IV for CBC decryption (will be updated after each block)
+                memcpy(current_iv, sfu_header.iv, AES_IV_SIZE);
+
+                // Start incremental hash for signature verification
+                if (Crypto_SHA256_Start() != CRYPTO_OK) {
+                    encrypted_mode = 0;
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                // Erase application flash
+                status = EraseApplicationFlash();
+                if (status != HAL_OK) {
+                    encrypted_mode = 0;
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                return 0;
+            }
+
+        case PACKET_TYPE_ENC_DATA:
+            // Encrypted data packet
+            {
+                if (fw_update_state != FW_RECEIVING || !encrypted_mode) {
+                    return -1;
+                }
+
+                // Verify packet length (must be multiple of AES block size)
+                if (packet->length == 0 || packet->length > 256) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+                if ((packet->length % AES_BLOCK_SIZE) != 0) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                // Verify packet CRC (over encrypted data)
+                uint32_t enc_crc = software_crc32(packet->data, packet->length);
+                if (enc_crc != packet->crc32) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                // Update hash with encrypted data (for signature verification)
+                if (Crypto_SHA256_Update(packet->data, packet->length) != CRYPTO_OK) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                // Decrypt the data
+                if (Crypto_DecryptFirmwareBlock(packet->data, decrypted_buffer,
+                                                 packet->length, current_iv) != CRYPTO_OK) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                enc_received_bytes += packet->length;
+
+                // Calculate actual data to write (handle final packet padding)
+                uint32_t data_to_write = packet->length;
+                uint32_t remaining = sfu_header.original_size - fw_received_bytes;
+                if (data_to_write > remaining) {
+                    data_to_write = remaining;  // Trim PKCS7 padding
+                }
+
+                // Calculate flash address
+                uint32_t flash_address = APPLICATION_START_ADDRESS + fw_received_bytes;
+
+                // Safety check
+                if (flash_address < APPLICATION_START_ADDRESS) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                // Prepare data with 32-byte alignment for flash write
+                uint32_t padded_length = ((data_to_write + 31) / 32) * 32;
+                memcpy(packet_buffer, decrypted_buffer, data_to_write);
+                for (uint32_t i = data_to_write; i < padded_length; i++) {
+                    packet_buffer[i] = 0xFF;
+                }
+
+                // Write to flash
+                __DSB();
+                status = FlashUnlock();
+                if (status != HAL_OK) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                status = WriteFlash(flash_address, packet_buffer, padded_length);
+                FlashLock();
+
+                if (status != HAL_OK) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                __DSB();
+                __ISB();
+
+                fw_received_bytes += data_to_write;
+
+                return 0;
+            }
+
+        case PACKET_TYPE_ENC_END:
+            // End of encrypted firmware update - verify signature
+            {
+                if (fw_update_state != FW_RECEIVING || !encrypted_mode) {
+                    return -1;
+                }
+
+                // Verify we received all encrypted data
+                if (enc_received_bytes != sfu_header.firmware_size) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                // Finalize hash
+                uint8_t computed_hash[SHA256_DIGEST_SIZE];
+                if (Crypto_SHA256_Finish(computed_hash) != CRYPTO_OK) {
+                    fw_update_state = FW_ERROR;
+                    return -1;
+                }
+
+                // Verify ECDSA signature
+                if (Crypto_ECDSA_VerifyHash(computed_hash, sfu_header.signature) != CRYPTO_OK) {
+                    // Signature verification failed - firmware is NOT authentic!
+                    fw_update_state = FW_ERROR;
+                    encrypted_mode = 0;
+                    return -1;
+                }
+
+                // Signature valid - firmware is authentic
+                encrypted_mode = 0;
+                fw_update_state = FW_COMPLETE;
+
+                return 0;
+            }
+
         default:
             return -1;
     }
@@ -645,6 +837,11 @@ void ResetFirmwareUpdate(void)
     fw_total_bytes = 0;
     fw_received_bytes = 0;
     last_erased_sector = 0;
+    // Reset encrypted mode state
+    encrypted_mode = 0;
+    enc_received_bytes = 0;
+    memset(&sfu_header, 0, sizeof(sfu_header));
+    memset(current_iv, 0, sizeof(current_iv));
     FlashLock();
 }
 
@@ -689,6 +886,7 @@ void GetBootloaderStatus(BootloaderStatus_t *status)
     status->flags = 0;
     if (last_erased_sector > 0) status->flags |= 0x01;  // Bit 0: flash erased
     if (fw_update_state == FW_RECEIVING) status->flags |= 0x02;  // Bit 1: transfer in progress
+    if (encrypted_mode) status->flags |= 0x04;  // Bit 2: encrypted mode (v3.0)
     status->footer = 0x55;
     status->padding[0] = 0;
     status->padding[1] = 0;

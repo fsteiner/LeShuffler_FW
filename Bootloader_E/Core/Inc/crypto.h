@@ -44,4 +44,12 @@ int32_t Crypto_ECDSA_Verify(const uint8_t *data, uint32_t data_length, const uin
 int32_t Crypto_ValidateSFUHeader(const SFU_Header_t *header);
 int32_t Crypto_DecryptFirmwareBlock(const uint8_t *encrypted_block, uint8_t *decrypted_block, uint32_t length, uint8_t *iv);
 
+/* Incremental SHA-256 for large data (signature verification) */
+int32_t Crypto_SHA256_Start(void);
+int32_t Crypto_SHA256_Update(const uint8_t *data, uint32_t length);
+int32_t Crypto_SHA256_Finish(uint8_t *hash);
+
+/* ECDSA verification with pre-computed hash */
+int32_t Crypto_ECDSA_VerifyHash(const uint8_t *hash, const uint8_t *signature);
+
 #endif /* INC_CRYPTO_H_ */

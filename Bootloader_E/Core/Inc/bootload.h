@@ -4,9 +4,10 @@
  *  Created on: Nov 23, 2025
  *      Author: fs
  *
- * Custom USB Bootloader for STM32H733VGT6
- * Bootloader: 0x08000000-0x08003FFF (16KB)
- * Application: 0x08004000-0x080FFFFF (1008KB)
+ * Custom USB Bootloader for STM32H733VGT6 (Encrypted - v3.0)
+ * Bootloader: 0x08000000-0x0801FFFF (128KB, full sector 0)
+ * Version info: 0x0801FFF0 (last 16 bytes of bootloader sector)
+ * Application: 0x08020000-0x080FFFFF (896KB, sectors 1-7)
  */
 
 #ifndef INC_BOOTLOAD_H_
@@ -126,9 +127,14 @@ typedef struct {
 #define PACKET_TYPE_STATUS 0x04  // v2: Query bootloader state
 #define PACKET_TYPE_RESUME 0x05  // v2.1: Resume interrupted transfer (no erase)
 
-// Bootloader version (v2.1 = 0x0201)
-#define BOOTLOADER_VERSION_MAJOR  2
-#define BOOTLOADER_VERSION_MINOR  1
+// Encrypted firmware update (v3 - Bootloader_E)
+#define PACKET_TYPE_ENC_START  0x10  // Contains SFU header
+#define PACKET_TYPE_ENC_DATA   0x11  // Contains encrypted data chunk
+#define PACKET_TYPE_ENC_END    0x12  // Triggers signature verification
+
+// Bootloader version (v3.0 = 0x0300 - Encrypted bootloader)
+#define BOOTLOADER_VERSION_MAJOR  3
+#define BOOTLOADER_VERSION_MINOR  0
 #define BOOTLOADER_VERSION        ((BOOTLOADER_VERSION_MAJOR << 8) | BOOTLOADER_VERSION_MINOR)
 
 // Status response structure (sent in response to STATUS packet)
