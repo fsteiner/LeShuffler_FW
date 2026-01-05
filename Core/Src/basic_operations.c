@@ -8,6 +8,7 @@
 #include <basic_operations.h>
 #include <buttons.h>
 #include <i2c.h>
+#include "iwdg.h"
 #include <ili9488.h>
 #include <games.h>
 #include <interface.h>
@@ -57,6 +58,7 @@ return_code_t wait_sensor(sensor_code_t _S, bool eventType, uint32_t delay)
 	// Main loop
 	while (!event)
 	{
+		watchdog_refresh();
 		//Wait for sensor to either a)see requested status, b)escape or c)expiry of delay (if delay >0)
 		while (!(reading = (read_sensor(_S) == eventType))
 				&& !(escape = ((_S == SHOE_SENSOR) && escape_btn.short_press))
@@ -107,6 +109,7 @@ return_code_t wait_seen_entry(uint32_t delay)
 	// Main loop
 	while (!event)
 	{
+		watchdog_refresh();
 		//Wait for either a) one of 3 entry sensors to see requested status or b) expiry of delay (if delay >0)
 		while (!(reading = (read_sensor(ENTRY_SENSOR_1) == eventType
 				|| read_sensor(ENTRY_SENSOR_2) == eventType
@@ -158,6 +161,7 @@ return_code_t wait_clear_entry(uint32_t delay)
 	// Main loop
 	while (!event)
 	{
+		watchdog_refresh();
 		//Wait for either a) one of 3 entry sensors to see requested status or b) expiry of delay (if delay >0)
 		while (!(reading = (read_sensor(ENTRY_SENSOR_1) == eventType
 				|| read_sensor(ENTRY_SENSOR_3) == eventType))
@@ -605,6 +609,7 @@ return_code_t home_carousel(void)
 	startTime = HAL_GetTick();
 	while (crsl_at_home() && HAL_GetTick() < startTime + homingMaxTime)
 	{
+		watchdog_refresh();
 		//rpm = min(HOMING_SPEED, rpm + stepUp);
 		rpm = min(HOMING_SPEED, rpm * step_up);
 		rotate_one_step(rpm);
@@ -621,6 +626,7 @@ return_code_t home_carousel(void)
 	startTime = HAL_GetTick();
 	while (!crsl_at_home() && HAL_GetTick() < startTime + homingMaxTime)
 	{
+		watchdog_refresh();
 		rpm = min(HOMING_SPEED, rpm + stepUp);
 		rotate_one_step(rpm);
 		MR.initial_move++;
@@ -635,6 +641,7 @@ return_code_t home_carousel(void)
 	// If it is the case, realign precisely to end of home position while decelerating through [about 8-9 steps]
 	while (crsl_at_home())
 	{
+		watchdog_refresh();
 		if (rpm > HOMING_SLOW_SPEED && rpm > stepDn)
 			rpm = max(HOMING_SLOW_SPEED, rpm - stepDn);
 		rotate_one_step(rpm);
@@ -1662,9 +1669,10 @@ return_code_t adjust_flap(uint32_t *p_ref_pos)
 	prompt_basic_item("      ", 2);
 	while (!encoder_btn.interrupt_press && !escape_btn.interrupt_press)
 	{
+		watchdog_refresh();
 		while ((increment = read_encoder(CLK_WISE)) == 0
 				&& !encoder_btn.interrupt_press && !escape_btn.interrupt_press)
-			;
+			watchdog_refresh();
 		if (increment > 0
 				|| (increment < 0
 						&& (uint32_t) (-increment * FLAP_FACTOR) < final_pos))

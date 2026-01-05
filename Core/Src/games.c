@@ -5,6 +5,7 @@
 #include <basic_operations.h>
 #include <buttons.h>
 #include <games.h>
+#include "iwdg.h"
 #include <interface.h>
 #include <ili9488.h>
 #include <rng.h>
@@ -1776,6 +1777,7 @@ return_code_t get_n_x(uint16_t *p_nx, uint16_t min_n_x, uint16_t max_n_x,
 	while (!escape_btn.interrupt_press && !encoder_btn.interrupt_press
 			&& !(tray_empty_at_start && cards_in_tray()))
 	{
+		watchdog_refresh();
 		if ((increment = read_encoder(CLK_WISE)))
 		{
 			// Detect CW turn of encoder
@@ -1906,6 +1908,7 @@ return_code_t get_n_pick_or_deal(game_rules_t game_rules, uint16_t *p_n_cards)
 	reset_btns();
 	while (!escape_btn.interrupt_press && !encoder_btn.interrupt_press)
 	{
+		watchdog_refresh();
 		// Trigger recycling if necessary
 		extern uint8_t n_cards_in;
 		if (game_rules.recycle_mode == RECYCLE_ON
@@ -2071,6 +2074,7 @@ return_code_t run_game(void)
 // Introducing run_stage ret_val not to be shadowed
 	while (game_state.current_stage != END_GAME)
 	{
+		watchdog_refresh();
 		if ((ret_val = run_stage(game_rules, &user_prefs)) == LS_OK)
 		{
 			// If initialising, save n players as defaults
@@ -2808,8 +2812,10 @@ return_code_t set_user_prefs(item_code_t game_code)
 	extern button escape_btn;
 	while (!escape_btn.interrupt_press)
 	{
+		watchdog_refresh();
 		while (!encoder_btn.interrupt_press && !escape_btn.interrupt_press)
 		{
+			watchdog_refresh();
 			if ((increment = read_encoder(CLK_WISE)))
 			{
 				// Detect CW turn of encoder
@@ -2863,6 +2869,7 @@ return_code_t set_user_prefs(item_code_t game_code)
 
 				do // while no button press
 				{
+					watchdog_refresh();
 					// Update display when encoder turn
 					if ((increment = read_encoder(CLK_WISE)))
 					{
@@ -3203,6 +3210,7 @@ return_code_t shufflers_choice(void)
 	reset_btns();
 	while (1)
 	{
+		watchdog_refresh();
 		// Set game state to random game from dealer's choice
 		if ((ret_val = reset_game_state()) != LS_OK)
 			goto _EXIT;

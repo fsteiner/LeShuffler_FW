@@ -43,6 +43,7 @@
 #include <TMC2209.h>
 #include "usbd_cdc_if.h"
 #include <utilities.h>
+#include "iwdg.h"
 
 #include "tests.h"
 
@@ -167,6 +168,7 @@ int main(void)
 	MX_UART5_Init();
 	MX_USB_DEVICE_Init();
 	MX_USART3_UART_Init();
+	MX_IWDG1_Init();
 	/* USER CODE BEGIN 2 */
 
 	/**
@@ -304,6 +306,7 @@ int main(void)
 	/* Infinite loop */
 	while (1)
 	{
+		watchdog_refresh();
 
 		// Force empty if error content
 		if (machine_state.content_error == CONTENT_ERROR)
@@ -679,6 +682,11 @@ int main(void)
 
 				case TEST_IMAGES:
 					show_images();
+					status = LS_OK;
+					break;
+
+				case TEST_WATCHDOG:
+					test_watchdog();
 					status = LS_OK;
 					break;
 

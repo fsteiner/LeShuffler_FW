@@ -8,6 +8,7 @@
 #include <basic_operations.h>
 #include <buttons.h>
 #include <interface.h>
+#include "iwdg.h"
 #include <ili9488.h>
 #include <rng.h>
 #include <stdbool.h>
@@ -431,6 +432,7 @@ void audioCheck(void)
 	reset_btns();
 	while (1)
 	{
+		watchdog_refresh();
 		update_btns();
 		// ENT - ONE STEP FORWARD
 		if (encoder_btn.short_press)
@@ -633,6 +635,7 @@ void readPortIDR(GPIO_TypeDef *pPort, uint32_t mask)
 	uint16_t N = 0;
 	while (1)
 	{
+		watchdog_refresh();
 		update_btns();
 		currentValue = pPort->IDR & mask;
 		if (currentValue != prevValue)
@@ -766,4 +769,35 @@ return_code_t test_random_deal(void)
 	pTargets = NULL;
 
 	return ret_val;
+}
+
+/**
+ * @brief Test watchdog reset functionality
+ * Enters infinite loop without refreshing watchdog.
+ * Device should reset after ~5 seconds.
+ */
+void test_watchdog(void)
+{
+	extern icon_set_t icon_set_check;
+	return_code_t user_input;
+
+	// Confirm with user before triggering reset
+	clear_text();
+	user_input = prompt_interface(WARNING, CUSTOM_MESSAGE,
+			"Device will reset in 5 seconds\nProceed?",
+			icon_set_check, ICON_BACK, BUTTON_PRESS);
+
+	if (user_input == LS_OK)
+	{
+		clear_text();
+		prompt_text("Watchdog test active...", 4, LCD_REGULAR_FONT);
+		prompt_text("Device will reset in 5 sec", 5, LCD_REGULAR_FONT);
+
+		// Deliberately NOT calling watchdog_refresh()
+		// Device should reset after ~5 seconds
+		while (1)
+		{
+			// Do nothing - watchdog will trigger reset
+		}
+	}
 }

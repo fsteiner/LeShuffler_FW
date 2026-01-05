@@ -12,5 +12,6 @@ void measureSlots(bool);
 void audioCheck(void);
 return_code_t test_images(void);
 void show_images(void);
+void test_watchdog(void);
 
 #endif /* INC_TESTS_H_ */

@@ -7,6 +7,7 @@
 
 #include <basic_operations.h>
 #include <bootload.h>
+#include "iwdg.h"
 #include <buttons.h>
 #include <fonts.h>
 #include <games.h>
@@ -146,7 +147,7 @@ item_code_t maintenance_items[] =
 
 item_code_t maintenance_level_2_items[] =
 { ABOUT, IMAGE_UTILITY, TEST_IMAGES, TEST_CAROUSEL, ADJUST_CARD_FLAP, SHUFFLE,
-		EMPTY, LOAD, TEST_EXIT_LATCH, TEST_BUZZER, DISPLAY_SENSORS };
+		EMPTY, LOAD, TEST_EXIT_LATCH, TEST_BUZZER, DISPLAY_SENSORS, TEST_WATCHDOG };
 
 item_code_t test_items[] =
 { TEST_CAROUSEL, TEST_EXIT_LATCH, TEST_BUZZER, TEST_IMAGES, DISPLAY_SENSORS };
@@ -349,6 +350,8 @@ menu_t display_sensors_menu =
 { DISPLAY_SENSORS, "Monitor Sensors", 0, NULL };
 menu_t test_images_menu =
 { TEST_IMAGES, "Test Images", 0, NULL };
+menu_t test_watchdog_menu =
+{ TEST_WATCHDOG, "Test Watchdog", 0, NULL };
 
 // menu_list MUST CONTAIN THE ADDRESSES OF ALL MENUS ABOVE
 menu_t *menu_list[] =
@@ -384,7 +387,7 @@ menu_t *menu_list[] =
 		&clean_tray_roller_menu, &clean_entry_roller_menu, &test_carousel_menu,
 		&test_carousel_driver_menu, &test_exist_latch_menu,
 		&access_exit_chute_menu, &adjust_card_flap_menu, &test_buzzer_menu,
-		&display_sensors_menu, &test_images_menu,
+		&display_sensors_menu, &test_images_menu, &test_watchdog_menu,
 
 		&games_list, &dealers_choice_list };
 
@@ -894,6 +897,7 @@ return_code_t prompt_dynamic_buttons(return_code_t message_code,
 // Cycle icon set with encoder or wait for auto trigger - blinks image if graphic error
 	while (1)
 	{
+		watchdog_refresh();
 		// Blink image if graphic error
 		if (error_type_val == GRAPHIC_ERROR
 				&& HAL_GetTick() > start_time_2 + blink_lag)
@@ -1726,6 +1730,7 @@ return_code_t menu_cycle(void)
 			&& !escape_btn.permanent_press && !encoder_btn.short_press
 			&& !encoder_btn.long_press && !encoder_btn.permanent_press)
 	{
+		watchdog_refresh();
 		// Update screen and check buttons
 		running_code = update_menu();
 		update_btns();
@@ -2249,8 +2254,11 @@ return_code_t prompt_about(void)
 	reset_btns();
 	uint32_t start_time = HAL_GetTick();
 	while (!escape_btn.interrupt_press && !encoder_btn.interrupt_press)
+	{
+		watchdog_refresh();
 		if ((HAL_GetTick() - start_time) > 3 * L_WAIT_DELAY)
 			break;
+	}
 
 	return ret_val;
 }
@@ -2335,11 +2343,13 @@ void name_input(char name_buffer[], uint16_t text_len)
 	reset_encoder();
 	while (in_loop[SELECT])
 	{
+		watchdog_refresh();
 		/* Move flashing character*/
 		reset_btns();
 		uint32_t previous_time = HAL_GetTick();
 		while (!escape_btn.interrupt_press && !encoder_btn.interrupt_press)
 		{
+			watchdog_refresh();
 			// Flash current character
 			if (HAL_GetTick() - previous_time > flash_time)
 			{
@@ -2394,6 +2404,7 @@ void name_input(char name_buffer[], uint16_t text_len)
 
 			while (in_loop[EDIT])
 			{
+				watchdog_refresh();
 				// Save current character
 				char original_char = flash_buffer[0];
 
@@ -2407,6 +2418,7 @@ void name_input(char name_buffer[], uint16_t text_len)
 				while (!escape_btn.short_press && !encoder_btn.short_press
 						&& !encoder_btn.permanent_press)
 				{
+					watchdog_refresh();
 					// Change character if encoder turns
 					if ((increment = read_encoder(CLK_WISE)))
 					{
@@ -2711,6 +2723,7 @@ void display_sensors(void)
 	reset_btns();
 	while (!escape_btn.permanent_press)
 	{
+		watchdog_refresh();
 		row = 1;
 		snprintf(display_buf, N_DISP_MAX,
 				"J14 TRAY:       %d   J11 ENTRY 1:    %d",

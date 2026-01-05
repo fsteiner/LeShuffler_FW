@@ -6,6 +6,7 @@
  */
 
 #include <buttons.h>
+#include "iwdg.h"
 #include <utilities.h>
 
 extern button escape_btn;
@@ -35,6 +36,7 @@ void reset_btn(button *pBtn)
 		released = false;
 	while (!released)
 	{
+		watchdog_refresh();
 		startTime = HAL_GetTick();
 		while (HAL_GPIO_ReadPin(pBtn->port, pBtn->pin) == pBtn->open_state)
 		{
