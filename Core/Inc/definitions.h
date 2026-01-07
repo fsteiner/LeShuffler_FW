@@ -141,8 +141,8 @@ extern "C" {
 #define HOMING_SPEED			33.3    // CRSL RPM
 #define CRSL_SLOW_SPEED			6.0 	// 7.0 fails on prod model, occasional failure at 6.5    // 5.9  	// CRSL RPM
 #define CRSL_FAST_SPEED			90.0 	// 90.0 used to work but now ≥ 75.0 alignment 100% 72.0 OK// CRSL RPM
-#define DDECK_SLOW_SPEED		CRSL_SLOW_SPEED
-#define DDECK_MAX_SPEED         90.0//60.0 	// 40.0     // CRSL RPM
+#define DDECK_SLOW_SPEED		(CRSL_SLOW_SPEED)
+#define DDECK_MAX_SPEED         (CRSL_FAST_SPEED*0.75)//60.0 	// 40.0     // CRSL RPM
 #define STP_OVERHEAD			1.4     // µs
 
 #define HOM_ACCEL_ZONE          (20*STEPS_PER_SLOT/10)  // steps

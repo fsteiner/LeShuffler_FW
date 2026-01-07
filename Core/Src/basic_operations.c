@@ -1445,12 +1445,10 @@ return_code_t move_n_slots(uint8_t N)
 // DOUBLE DECK LOGIC TO BE REVIEWED (RAMP ACCEL CONSISTENCY?)
 	const double slow_speed =
 			(machine_state.double_deck == DOUBLE_DECK_STATE) ?
-			DDECK_SLOW_SPEED :
-																CRSL_SLOW_SPEED;
+			DDECK_SLOW_SPEED : CRSL_SLOW_SPEED;
 	const double max_speed =
 			(machine_state.double_deck == DOUBLE_DECK_STATE) ?
-			DDECK_MAX_SPEED :
-																CRSL_FAST_SPEED;
+			DDECK_MAX_SPEED : CRSL_FAST_SPEED;
 	const uint32_t slow_lag = (uint32_t) round(
 	US_PER_STEP_AT_1_RPM / MS_FACTOR / slow_speed - STP_OVERHEAD);
 	const int16_t max_steps_for_one = (STEPS_PER_SLOT + 2) * MS_FACTOR;

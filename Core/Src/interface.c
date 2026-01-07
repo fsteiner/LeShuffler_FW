@@ -2141,7 +2141,7 @@ void prompt_uid(void)
 
 void prompt_firmware_version(void)
 {
-	uint16_t row = 4;
+	uint16_t row = 3;
 	char bl_version_str[32];
 
 	prompt_text(GetFirmwareVersionDisplay(), row++, LCD_REGULAR_FONT);
