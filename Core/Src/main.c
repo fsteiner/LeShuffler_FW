@@ -663,7 +663,7 @@ int main(void)
 					extern icon_set_t icon_set_check;
 					char fw_warning[80];
 					snprintf(fw_warning, sizeof(fw_warning),
-							"Current version: %s\nWill be erased. Continue?",
+							"Current version: %s\nwill be erased. Continue?",
 							GetFirmwareVersionString());
 					user_input = prompt_interface(WARNING, CUSTOM_MESSAGE,
 							fw_warning,
