@@ -227,7 +227,7 @@ void clear_bottom_message(void);
 void clear_icons(void);
 void prompt_basic_item(char*, uint8_t);
 void prompt_menu_item(char*, uint8_t);
-void prompt_text(char*, uint8_t, TFTSTCustomFontData);
+void prompt_text(const char*, uint8_t, TFTSTCustomFontData);
 void display_text(uint16_t, uint16_t, const char*, TFTSTCustomFontData,
 		uint16_t);
 void prompt_basic_text(char*, uint8_t, sFONT);

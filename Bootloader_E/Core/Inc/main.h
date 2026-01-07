@@ -46,7 +46,8 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
+/* Watchdog refresh - IWDG may be running from app, must keep refreshing */
+#define IWDG_REFRESH()  do { IWDG1->KR = 0xAAAA; } while(0)
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/

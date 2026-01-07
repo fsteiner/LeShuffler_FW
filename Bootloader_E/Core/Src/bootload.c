@@ -7,6 +7,7 @@
 #include "stm32h7xx_hal.h"
 #include "bootload.h"
 #include "crypto.h"
+#include "usbd_cdc_if.h"
 #include <string.h>
 
 // ============================================================================
@@ -299,6 +300,9 @@ HAL_StatusTypeDef EraseApplicationFlash(void)
     HAL_FLASH_Unlock();
 
     for (uint32_t i = 0; i < SECTORS_TO_ERASE; i++) {
+        // Refresh watchdog before each sector erase (takes ~seconds)
+        IWDG_REFRESH();
+
         erase.TypeErase = FLASH_TYPEERASE_SECTORS;
         erase.Banks = FLASH_BANK_1;
         erase.Sector = APP_FIRST_SECTOR + i;
@@ -353,6 +357,7 @@ HAL_StatusTypeDef WriteFlash(uint32_t address, uint8_t *data, uint32_t length)
 
     // Program flash in 256-bit chunks
     for (uint32_t i = 0; i < length; i += 32) {
+        IWDG_REFRESH();  // Refresh watchdog during flash writes
         status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_FLASHWORD,
                                    address + i,
                                    (uint32_t)(data + i));
@@ -466,6 +471,8 @@ static uint32_t fw_received_bytes = 0;
 
 // Small packet buffer - we write to flash one packet at a time
 // No large RAM buffer needed - just enough for one packet
+// CRITICAL: Must be 4-byte aligned for flash operations
+__attribute__((aligned(4)))
 static uint8_t packet_buffer[288];  // 256 bytes + padding to 32-byte boundary
 
 // ============================================================================
@@ -473,9 +480,15 @@ static uint8_t packet_buffer[288];  // 256 bytes + padding to 32-byte boundary
 // ============================================================================
 static uint8_t encrypted_mode = 0;           // 1 if processing encrypted .sfu
 static SFU_Header_t sfu_header;              // Stored SFU header
-static uint8_t current_iv[AES_IV_SIZE];      // Current IV for CBC decryption
 static uint32_t enc_received_bytes = 0;      // Encrypted bytes received
+
+// CRITICAL: These buffers MUST be 4-byte aligned for HAL_CRYP hardware
+__attribute__((aligned(4)))
+static uint8_t current_iv[AES_IV_SIZE];      // Current IV for CBC decryption
+__attribute__((aligned(4)))
 static uint8_t decrypted_buffer[256];        // Buffer for decrypted data
+__attribute__((aligned(4)))
+static uint8_t aligned_enc_buffer[256];      // Aligned copy of encrypted input
 
 /**
  * @brief Process received firmware packet from USB CDC
@@ -491,6 +504,7 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
             // Start of firmware update
             // v2: ALWAYS reset state and re-erase flash
             // This enables safe restart-from-beginning after USB disconnect
+            IWDG_REFRESH();
             fw_update_state = FW_RECEIVING;
             fw_total_bytes = packet->length;  // Total firmware size
             fw_received_bytes = 0;
@@ -532,6 +546,7 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
 
         case PACKET_TYPE_DATA:
             // ULTRA-CONSERVATIVE APPROACH: Write each packet immediately with long delays
+            IWDG_REFRESH();
 
             if (fw_update_state != FW_RECEIVING) {
                 return -1;
@@ -626,6 +641,14 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
         case PACKET_TYPE_ENC_START:
             // Encrypted firmware update - packet contains SFU header
             {
+                // Clear any leftover packet data from interrupted USB transfer
+                CDC_ClearPacketState();
+                IWDG_REFRESH();
+
+                // Reset crypto state first (handles interrupted transfers)
+                Crypto_Reset();
+                encrypted_mode = 0;
+
                 // Verify we have enough data for header
                 if (packet->length < sizeof(SFU_Header_t)) {
                     fw_update_state = FW_ERROR;
@@ -641,8 +664,7 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
                     return -1;
                 }
 
-                // Validate header (checks CRC, not signature yet - signature is over encrypted data)
-                // For now, just check basic sanity
+                // Validate sizes
                 if (sfu_header.firmware_size == 0 || sfu_header.firmware_size > (896 * 1024)) {
                     fw_update_state = FW_ERROR;
                     return -1;
@@ -655,11 +677,11 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
                 // Initialize encrypted mode
                 encrypted_mode = 1;
                 enc_received_bytes = 0;
-                fw_total_bytes = sfu_header.original_size;  // Decrypted size
+                fw_total_bytes = sfu_header.original_size;
                 fw_received_bytes = 0;
                 fw_update_state = FW_RECEIVING;
 
-                // Copy IV for CBC decryption (will be updated after each block)
+                // Copy IV for CBC decryption
                 memcpy(current_iv, sfu_header.iv, AES_IV_SIZE);
 
                 // Start incremental hash for signature verification
@@ -681,13 +703,16 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
             }
 
         case PACKET_TYPE_ENC_DATA:
-            // Encrypted data packet
+            // Full encrypted data handler: validate, hash, decrypt, flash
             {
+                IWDG_REFRESH();
+
+                // State check
                 if (fw_update_state != FW_RECEIVING || !encrypted_mode) {
                     return -1;
                 }
 
-                // Verify packet length (must be multiple of AES block size)
+                // Length checks
                 if (packet->length == 0 || packet->length > 256) {
                     fw_update_state = FW_ERROR;
                     return -1;
@@ -697,21 +722,24 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
                     return -1;
                 }
 
-                // Verify packet CRC (over encrypted data)
+                // CRC check (over encrypted data)
                 uint32_t enc_crc = software_crc32(packet->data, packet->length);
                 if (enc_crc != packet->crc32) {
                     fw_update_state = FW_ERROR;
                     return -1;
                 }
 
+                // Copy to aligned buffer for crypto operations
+                memcpy(aligned_enc_buffer, packet->data, packet->length);
+
                 // Update hash with encrypted data (for signature verification)
-                if (Crypto_SHA256_Update(packet->data, packet->length) != CRYPTO_OK) {
+                if (Crypto_SHA256_Update(aligned_enc_buffer, packet->length) != CRYPTO_OK) {
                     fw_update_state = FW_ERROR;
                     return -1;
                 }
 
                 // Decrypt the data
-                if (Crypto_DecryptFirmwareBlock(packet->data, decrypted_buffer,
+                if (Crypto_DecryptFirmwareBlock(aligned_enc_buffer, decrypted_buffer,
                                                  packet->length, current_iv) != CRYPTO_OK) {
                     fw_update_state = FW_ERROR;
                     return -1;
@@ -723,7 +751,7 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
                 uint32_t data_to_write = packet->length;
                 uint32_t remaining = sfu_header.original_size - fw_received_bytes;
                 if (data_to_write > remaining) {
-                    data_to_write = remaining;  // Trim PKCS7 padding
+                    data_to_write = remaining;  // Trim PKCS7 padding on final packet
                 }
 
                 // Calculate flash address
@@ -769,6 +797,8 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
         case PACKET_TYPE_ENC_END:
             // End of encrypted firmware update - verify signature
             {
+                IWDG_REFRESH();
+
                 if (fw_update_state != FW_RECEIVING || !encrypted_mode) {
                     return -1;
                 }
@@ -780,13 +810,16 @@ int32_t ProcessFirmwarePacket(FirmwarePacket_t *packet)
                 }
 
                 // Finalize hash
-                uint8_t computed_hash[SHA256_DIGEST_SIZE];
+                // CRITICAL: Must be 4-byte aligned for HASH DMA output
+                __attribute__((aligned(4)))
+                static uint8_t computed_hash[SHA256_DIGEST_SIZE];
                 if (Crypto_SHA256_Finish(computed_hash) != CRYPTO_OK) {
                     fw_update_state = FW_ERROR;
                     return -1;
                 }
 
-                // Verify ECDSA signature
+                // Verify ECDSA signature (this is the slow part - ~1-2 seconds)
+                IWDG_REFRESH();
                 if (Crypto_ECDSA_VerifyHash(computed_hash, sfu_header.signature) != CRYPTO_OK) {
                     // Signature verification failed - firmware is NOT authentic!
                     fw_update_state = FW_ERROR;

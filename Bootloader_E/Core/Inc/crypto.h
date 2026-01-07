@@ -38,6 +38,7 @@ typedef struct __attribute__((packed)) {
 } SFU_Header_t;
 
 int32_t Crypto_Init(void);
+void Crypto_Reset(void);  /* Reset crypto state after interrupted transfer */
 int32_t Crypto_AES256_Decrypt(const uint8_t *encrypted, uint8_t *decrypted, uint32_t length, const uint8_t *iv);
 int32_t Crypto_SHA256(const uint8_t *data, uint32_t length, uint8_t *hash);
 int32_t Crypto_ECDSA_Verify(const uint8_t *data, uint32_t data_length, const uint8_t *signature);
@@ -51,5 +52,9 @@ int32_t Crypto_SHA256_Finish(uint8_t *hash);
 
 /* ECDSA verification with pre-computed hash */
 int32_t Crypto_ECDSA_VerifyHash(const uint8_t *hash, const uint8_t *signature);
+
+/* DEBUG: Check if incremental hash is in progress */
+uint8_t Crypto_IsHashStarted(void);
+uint8_t Crypto_GetHashState(void);
 
 #endif /* INC_CRYPTO_H_ */

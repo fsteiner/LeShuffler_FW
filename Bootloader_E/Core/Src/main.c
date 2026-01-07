@@ -169,6 +169,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+    // Refresh watchdog (may be running from app)
+    IWDG_REFRESH();
+
     // Process any received packets (do flash operations here, not in interrupt)
     CDC_ProcessPacket();
 
@@ -181,6 +184,7 @@ int main(void)
 
         // Give error feedback (fast beeps)
         for (int i = 0; i < 5; i++) {
+            IWDG_REFRESH();
             HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
             HAL_Delay(50);
             HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
@@ -193,8 +197,10 @@ int main(void)
 
         // SUCCESS: 2 long beeps = about to reset
         for (int i = 0; i < 2; i++) {
+            IWDG_REFRESH();
             HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
             HAL_Delay(500);
+            IWDG_REFRESH();
             HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
             HAL_Delay(300);
         }
@@ -214,6 +220,7 @@ int main(void)
 
     // Timeout handling - if no firmware received, jump to application
     if (bootloader_timeout > 0) {
+        IWDG_REFRESH();
         HAL_Delay(10);
         bootloader_timeout -= 10;
     } else {
