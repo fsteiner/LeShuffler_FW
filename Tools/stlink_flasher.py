@@ -11,7 +11,7 @@ Memory Map:
 
 Usage:
   1. Connect ST-LINK to device
-  2. Place bootloader.bin and LeShuffler.bin in same folder as this script
+  2. Place Bootloader_E.bin and LeShuffler.bin in same folder as this script
   3. Run: python stlink_flasher.py
 
   Or with custom paths:
@@ -147,7 +147,7 @@ Examples:
     python stlink_flasher.py --bootloader my_bootloader.bin --firmware my_app.bin
 """
     )
-    parser.add_argument("--bootloader", type=str, help="Path to bootloader binary (default: LeShuffler_Bootloader_Minimal.bin)")
+    parser.add_argument("--bootloader", type=str, help="Path to bootloader binary (default: Bootloader_E.bin)")
     parser.add_argument("--firmware", type=str, help="Path to firmware binary (default: LeShuffler.bin)")
     parser.add_argument("--firmware-only", action="store_true", help="Flash only firmware, skip bootloader")
     parser.add_argument("--bootloader-only", action="store_true", help="Flash only bootloader, skip firmware")
@@ -185,9 +185,9 @@ Examples:
         if not bootloader_path:
             # Look for bootloader in common locations
             candidates = [
-                script_dir / "LeShuffler_Bootloader_Minimal.bin",
+                script_dir / "Bootloader_E.bin",
                 script_dir / "bootloader.bin",
-                script_dir / "LeShuffler_Bootloader_Minimal" / "Debug" / "LeShuffler_Bootloader_Minimal.bin",
+                script_dir / ".." / "Bootloader_E" / "Debug" / "Bootloader_E.bin",
             ]
             for candidate in candidates:
                 if candidate.exists():

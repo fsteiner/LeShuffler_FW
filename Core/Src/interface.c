@@ -18,6 +18,7 @@
 #include <servo_motor.h>
 #include <stdlib.h>
 #include <utilities.h>
+#include <version.h>
 //#include "condor_black_regular_24.h"
 //#include "condor_black_italic_30.h"
 
@@ -1200,7 +1201,7 @@ void prompt_menu_item(char *text, uint8_t row)
 }
 
 // Prompt text at the beginning of row without clearing row beforehand
-void prompt_text(char *text, uint8_t row, TFTSTCustomFontData font)
+void prompt_text(const char *text, uint8_t row, TFTSTCustomFontData font)
 {
 	uint16_t colour = LCD_COLOR_TEXT;
 	uint16_t x = LCD_X_TEXT;
@@ -2143,7 +2144,7 @@ void prompt_firmware_version(void)
 	uint16_t row = 4;
 	char bl_version_str[32];
 
-	prompt_text(VERSION, row++, LCD_REGULAR_FONT);
+	prompt_text(GetFirmwareVersionDisplay(), row++, LCD_REGULAR_FONT);
 
 	// Display bootloader version
 	uint16_t bl_ver = GetBootloaderVersion();

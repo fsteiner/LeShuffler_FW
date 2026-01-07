@@ -1,85 +1,196 @@
-# LeShuffler
-This project is made for the ARM Cortex-M7 STM32 platform (using the STM32H7).
+# LeShuffler Firmware
 
-## Description
-In this project, the peripherials which are configured are Motors(Stepper Motor, DC Motor and Servo Motor), Sensors(IR, HallEffect and Proximity Sensor), External Memory, Buzzer and LCD Display. 
+Firmware for the LeShuffler automatic card shuffling device, built on the STM32H733VGT6 (ARM Cortex-M7).
 
-### Functions
-#### Stepper Motor
--The TMC2209init is for the Stepper Motor. In this function the user has to set the TMC2209 handle, slaveAddress, UART handle, Timer handle 
-```TMC2209init()```
--To run the stepper motor the user have to make the GPIO in pin output to a low level for **ENN** and **STANDBY** pin.
--The **MS1** and **MS2** pin output level is set according to the Microstepping is set. To set the different values of **MS1** and **MS2** refer to the datasheet. 
--The below function is to Set the microstep. 
-```TMC2209_SetMicroSteps()```
--The below function is to Set the Driection as ClockWise or AntiClockWise of Motor
-```TMC2209_SetDirection()```
--The below function is to Set PWM frequency in kHz
-```SetPWMFrequency()```
--The below function is to Set the Step Count
-```TMC2209_SetStepCount()```
+## Project Structure
 
-#### DC Motor
--The DCmotor_Init is for the DC Motor. In this function the user has to set the DCmotor handle, Timer handle 
-```DCmotor_Init()```
--This function is to Run the DC Motor and Solenoid, the user has to set the Direction and duty Cycle of the motor.
-```setSolenoid()```
-```SetMotor2Rotation()```
-```SetMotor1Rotation()```
+```
+LeShuffler/
+├── Core/                    # Application firmware source
+│   ├── Inc/                 # Headers (interface.h, definitions.h, version.h, etc.)
+│   └── Src/                 # Source files
+├── Bootloader/              # Legacy bootloader (v2.1, unencrypted)
+├── Bootloader_E/            # Encrypted bootloader (v3.0+)
+│   ├── Core/Inc/crypto_keys.h.template  # Key template (copy to crypto_keys.h)
+│   └── ...
+├── Tools/                   # Python utilities
+│   ├── firmware_updater_encrypted.py    # USB firmware updater
+│   ├── encrypt_firmware.py              # Create encrypted .sfu files
+│   └── stlink_flasher.py                # ST-LINK factory flasher
+├── Drivers/                 # STM32 HAL drivers
+├── LCD/                     # Display drivers (ILI9488)
+├── Motors/                  # Motor control (TMC2209, DC, Servo)
+└── USB_DEVICE/              # USB CDC for firmware updates
+```
 
-#### Servo Motor 
--The servoMotorInit is for the Servo Motor. In this function the user has to set the Servo Motor handle, Timer handle, Timer Channel
-```servoMotorInit()```
--This function is to run the Servo Motor, the user has to set the Servo motor handle sturucture defination and angle. 
-```ServoMotor_SetAngle()```
+## Memory Layout
 
-#### Sensor 
--In the below sensor function the user have to set the GPIO port and GPIO Pin number. 
-```Proximity_Sensor()```
-```HallEffect_Sensor()```
-```IRSensor()```
+| Region | Address | Size | Contents |
+|--------|---------|------|----------|
+| Bootloader | 0x08000000 | 48 KB | Bootloader_E (encrypted support) |
+| Reserved | 0x0800C000 | 80 KB | Future use |
+| Application | 0x08020000 | ~900 KB | Main firmware |
 
-### LCD Display
--To ON the blacklight of the LCD Display Set the GPIO pin output to a high level. 
--The below function will initialize the LCD (ili9488)
-```BSP_LCD_Init()```
--The below function is to make the LCD screen Clear, the user has to set the display color
-```BSP_LCD_Clear()```
+## Building
 
--The below function is to initialize the External Memory configuartions. 
-```W25Q128_OCTO_SPI_Init()```
--The below function is the write function for the external Memory at the particular address in a flash. In STM32H7B0VBT6 the flash Memory address is **0x70000000**.
--The user have to put the image data, starting address and size of the image. 
-```W25Q128_OSPI_Write()```
--The below function is to enable the Memory Mapped Mode for the External Memory. 
-```W25Q128_OSPI_EnableMemoryMappedMode()```
--The below function is to Read the ID of the ili9488. 
-```ili9488_ReadID()```
--The below functyion is for the Custom Font. The user have to set teh font, x and y position, text, text color and Background color.
-```tftstDrawTextWithFont();```
--The below function is to draw the RGB 8 bit Image. The user have to set the x and y position, image height and width, and address. 
-```ili9488_DrawRGBImage8bit();```
+**Requirements:** STM32CubeIDE 1.13+
 
+1. Import project: File → Import → Existing Projects into Workspace
+2. Select the `LeShuffler` folder
+3. Build configurations:
+   - **LeShuffler** (application) → produces `LeShuffler.bin`
+   - **Bootloader_E** (encrypted bootloader) → produces `Bootloader_E.bin`
 
-#### Note on debouncing read_sensor.
-Used in:
-	wait_sensor() 			debounced
-	wait_seen_entry()		debounced
-	cards_in_tray()			debounced
-	cards_in_shoe()			debounced
-	load_one_card()			out of function debouncing 
-	load_max_n_cards() 		external debouncing of load_one_card()
-	load_double_deck() 		external debouncing of load_one_card()
-	crsl_at_home()			cannot be debounced, time-critical
-	slot_light()			external debouncing except in tests
-	slot_dark()				external debouncing except in tests
-	home_carousel()			initial card check x 2 with debouncing
-	carousel_vibration()	x2 no debouncing
-	eject_one_card()		x4 no debouncing, used only for troubleshooting (wiggle, vibration)
-	display_sensors()		NA
-	testStep()				test only
-	
+## Firmware Update System
 
+### Overview
 
+The device supports two update methods:
+- **USB Update** - End users can update via USB without opening the device
+- **ST-LINK** - Factory programming and recovery
 
+### Bootloader Versions
 
+| Version | Encryption | File Types | Notes |
+|---------|------------|------------|-------|
+| v1.x | No | .bin only | Original shipped version |
+| v2.x | No | .bin only | Added resume on disconnect |
+| v3.0+ | Yes | .sfu or .bin | AES-256-CBC + ECDSA-P256 |
+
+### USB Update Process
+
+1. On device: Settings → Maintenance → Firmware Update
+2. Wait for 3 short beeps + 1 long beep (bootloader ready)
+3. On PC: Run `python Tools/firmware_updater_encrypted.py`
+4. Select COM port and wait for transfer to complete
+
+The updater auto-detects bootloader version and selects the appropriate file:
+- v3.0+ bootloader: Uses `.sfu` (encrypted)
+- v1.x/v2.x bootloader: Falls back to `.bin` (legacy)
+
+## Tools
+
+### firmware_updater_encrypted.py
+
+USB firmware updater supporting both encrypted and legacy transfers.
+
+```bash
+python firmware_updater_encrypted.py              # Interactive
+python firmware_updater_encrypted.py COM5         # Direct
+python firmware_updater_encrypted.py --list       # List ports
+```
+
+**Required files** (in Tools folder):
+- `LeShuffler.sfu` - Encrypted firmware (for v3.0+ bootloaders)
+- `LeShuffler.bin` - Plain firmware (fallback for legacy bootloaders)
+
+### encrypt_firmware.py
+
+Creates encrypted `.sfu` files from plain `.bin` files.
+
+```bash
+# With test keys
+python encrypt_firmware.py LeShuffler.bin LeShuffler.sfu --keys test_keys.json
+
+# Generate new production keys
+python encrypt_firmware.py --generate-keys /secure/path/production_keys.json
+```
+
+### stlink_flasher.py
+
+Factory programming via ST-LINK. Flashes both bootloader and firmware.
+
+```bash
+python stlink_flasher.py                # Flash both
+python stlink_flasher.py --rdp 1        # Flash + enable read protection
+python stlink_flasher.py --firmware-only  # Firmware only
+```
+
+**Required files** (in Tools folder):
+- `Bootloader_E.bin` → 0x08000000
+- `LeShuffler.bin` → 0x08020000
+
+**Requires:** [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html)
+
+## Production Workflow
+
+### 1. Development (RDP Level 0)
+
+- Full debug access via ST-LINK
+- Use test keys for encryption testing
+- Iterate on firmware development
+
+### 2. Generate Production Keys
+
+```bash
+# Create secure folder (outside Dropbox/Git)
+mkdir -p ~/LeShuffler_Keys
+
+# Generate keys
+python Tools/encrypt_firmware.py --generate-keys ~/LeShuffler_Keys/production_keys.json
+
+# Backup to password manager (1Password, etc.)
+```
+
+### 3. Build with Production Keys
+
+1. Copy AES key and ECDSA public key from `production_keys.json`
+2. Paste into `Bootloader_E/Core/Inc/crypto_keys.h`
+3. Rebuild Bootloader_E project
+
+### 4. Factory Flash (RDP Level 1)
+
+```bash
+python Tools/stlink_flasher.py --rdp 1
+```
+
+This:
+- Flashes bootloader with production keys
+- Flashes application firmware
+- Enables read protection (flash cannot be read, but can be erased and reflashed)
+
+## Versioning
+
+### Firmware Version
+
+Defined in `Core/Inc/version.h`:
+```c
+#define FW_VERSION_MAJOR  1
+#define FW_VERSION_MINOR  0
+#define FW_VERSION_PATCH  1
+```
+
+Displayed as "v1.0.1" in Settings → About.
+
+### Bootloader Version
+
+Stored at fixed address `0x0800BFF0`. Application can read via `GetBootloaderVersion()`.
+
+## Security
+
+### Key Management
+
+| Key | Location | Purpose |
+|-----|----------|---------|
+| AES-256 | `crypto_keys.h` (bootloader flash) | Decrypt firmware |
+| ECDSA Private | `production_keys.json` (offline only) | Sign firmware |
+| ECDSA Public | `crypto_keys.h` (bootloader flash) | Verify signature |
+
+**Never commit:**
+- `crypto_keys.h` (real keys)
+- `*_keys.json` (key files)
+- `*.pem` (exported keys)
+
+### Read Protection (RDP)
+
+| Level | Read Flash | Reflash | Revert |
+|-------|------------|---------|--------|
+| 0 | Yes | Yes | N/A |
+| 1 | No | Yes (mass erase) | Yes |
+| 2 | No | No | No (permanent) |
+
+Production devices use **RDP Level 1**.
+
+## License
+
+Proprietary - All rights reserved.

@@ -5,6 +5,7 @@
 
 #include "usbd_cdc_if.h"
 #include "bootload.h"
+#include "stm32h7xx_hal.h"
 #include <string.h>
 
 // USB handles
@@ -15,14 +16,28 @@ static uint8_t UserRxBufferFS[512];
 static uint8_t UserTxBufferFS[64];
 
 // Packet assembly buffer
+// CRITICAL: Must be 4-byte aligned for consistent structure alignment
+__attribute__((aligned(4)))
 static uint8_t PacketAssemblyBuffer[sizeof(FirmwarePacket_t)];
 static uint32_t rx_buffer_index = 0;
 
 // Processing buffer (copy of packet for main loop processing)
+// CRITICAL: Must be 4-byte aligned for HAL_HASH operations on packet->data
+__attribute__((aligned(4)))
 static uint8_t PacketProcessingBuffer[sizeof(FirmwarePacket_t)];
 
 // Packet ready flag (processed in main loop, not in interrupt)
 static volatile uint8_t packet_ready = 0;
+
+/**
+ * @brief Clear USB packet assembly state
+ * Call this at start of ENC_START to ensure clean state after reconnect
+ */
+void CDC_ClearPacketState(void)
+{
+    rx_buffer_index = 0;
+    packet_ready = 0;
+}
 
 // Function prototypes (already declared in usbd_cdc_if.h)
 static int8_t CDC_Init_FS(void);
@@ -49,14 +64,25 @@ static int8_t CDC_Init_FS(void)
     USBD_CDC_SetTxBuffer(&hUsbDeviceHS, UserTxBufferFS, 0);
     USBD_CDC_SetRxBuffer(&hUsbDeviceHS, UserRxBufferFS);
 
+    // CRITICAL: Clear packet assembly state on USB reconnect
+    // Without this, leftover bytes from a previous disconnected transfer
+    // get mixed with new packets, causing corruption
+    rx_buffer_index = 0;
+    packet_ready = 0;
+
     return USBD_OK;
 }
 
 /**
  * @brief DeInitialize USB CDC interface
+ * Called on USB disconnect - clear packet state to prevent corruption on reconnect
  */
 static int8_t CDC_DeInit_FS(void)
 {
+    // Clear packet assembly state on disconnect
+    // This ensures clean state when USB reconnects
+    rx_buffer_index = 0;
+    packet_ready = 0;
     return USBD_OK;
 }
 
@@ -122,6 +148,15 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
     // Now process the received data
     uint32_t bytes_received = *Len;
 
+    // DEFENSIVE: If starting fresh packet and first byte looks like ENC_START (0x11),
+    // ensure we have clean state (handles edge cases where DeInit wasn't called)
+    if (rx_buffer_index == 0 && bytes_received > 0) {
+        if (Buf[0] == 0x11) {  // PACKET_TYPE_ENC_START
+            // Starting a new ENC_START - ensure packet_ready is cleared
+            packet_ready = 0;
+        }
+    }
+
     // Accumulate bytes into assembly buffer
     for (uint32_t i = 0; i < bytes_received; i++) {
         if (rx_buffer_index < sizeof(PacketAssemblyBuffer)) {
@@ -161,12 +196,13 @@ void CDC_ProcessPacket(void)
         }
 
         // Process other packet types
+        uint8_t pkt_type = packet->packet_type;  // Save before processing
         int32_t result = ProcessFirmwarePacket(packet);
 
         // Build standard 8-byte response
         uint8_t response[8];
         response[0] = 0xAA;  // Response header
-        response[1] = packet->packet_type;
+        response[1] = pkt_type;
         response[2] = (result == 0) ? 0x01 : 0x00;  // Success/Fail
         response[3] = GetFirmwareUpdateProgress();  // Progress %
         response[4] = (uint8_t)(GetFirmwareUpdateState());

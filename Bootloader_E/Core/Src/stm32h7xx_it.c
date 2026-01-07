@@ -192,7 +192,9 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-
+  /* Refresh IWDG every tick - critical during blocking ECDSA verification (~1-2 seconds)
+   * The IWDG may have been started by the application before entering bootloader */
+  IWDG1->KR = 0xAAAA;
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */

@@ -4,6 +4,7 @@ Release/
 *.elf
 *.bin
 *.hex
+*.sfu
 *.map
 *.list
 *.o
@@ -31,3 +32,14 @@ RemoteSystemsTempFiles/
 
 # Windows executables (build with PyInstaller from source)
 *.exe
+
+# Cryptographic keys (NEVER commit private/secret keys!)
+*_keys.json
+*.pem
+production_keys/
+keys/
+
+# crypto_keys.h contains AES secret key - use template instead
+Bootloader_E/Core/Inc/crypto_keys.h
+Bootloader/Core/Inc/crypto_keys.h
+!*.template
