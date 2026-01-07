@@ -11,7 +11,7 @@ Memory Map:
 
 Usage:
   1. Connect ST-LINK to device
-  2. Place Bootloader_E.bin and LeShuffler.bin in same folder as this script
+  2. Place LeShuffler_Bootloader_E.bin and LeShuffler.bin in same folder as this script
   3. Run: python stlink_flasher.py
 
   Or with custom paths:
@@ -147,7 +147,7 @@ Examples:
     python stlink_flasher.py --bootloader my_bootloader.bin --firmware my_app.bin
 """
     )
-    parser.add_argument("--bootloader", type=str, help="Path to bootloader binary (default: Bootloader_E.bin)")
+    parser.add_argument("--bootloader", type=str, help="Path to bootloader binary (default: LeShuffler_Bootloader_E.bin)")
     parser.add_argument("--firmware", type=str, help="Path to firmware binary (default: LeShuffler.bin)")
     parser.add_argument("--firmware-only", action="store_true", help="Flash only firmware, skip bootloader")
     parser.add_argument("--bootloader-only", action="store_true", help="Flash only bootloader, skip firmware")
@@ -155,6 +155,7 @@ Examples:
     parser.add_argument("--no-erase", action="store_true", help="Skip full chip erase (use for partial updates)")
     parser.add_argument("--no-reset", action="store_true", help="Don't reset device after flashing")
     parser.add_argument("--programmer", type=str, help="Path to STM32_Programmer_CLI.exe")
+    parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation prompt (for factory use)")
 
     args = parser.parse_args()
 
@@ -185,9 +186,10 @@ Examples:
         if not bootloader_path:
             # Look for bootloader in common locations
             candidates = [
+                script_dir / "LeShuffler_Bootloader_E.bin",
                 script_dir / "Bootloader_E.bin",
                 script_dir / "bootloader.bin",
-                script_dir / ".." / "Bootloader_E" / "Debug" / "Bootloader_E.bin",
+                script_dir / ".." / "Bootloader_E" / "Debug" / "LeShuffler_Bootloader_E.bin",
             ]
             for candidate in candidates:
                 if candidate.exists():
@@ -222,8 +224,9 @@ Examples:
             print("  WARNING: Level 2 is PERMANENT!")
 
     # Confirm
-    print("\n" + "-"*60)
-    input("Press Enter to start flashing (Ctrl+C to abort)...")
+    if not args.yes:
+        print("\n" + "-"*60)
+        input("Press Enter to start flashing (Ctrl+C to abort)...")
 
     # Check connection
     if not check_connection(cli_path):
@@ -270,7 +273,13 @@ Examples:
     print("  FLASHING COMPLETE!")
     print("="*60)
 
-    if bootloader_path and firmware_path:
+    if args.rdp is not None:
+        print("\n" + "!"*60)
+        print("  IMPORTANT: Power cycle the device!")
+        print("  (Unplug USB + ST-LINK, wait 3 sec, reconnect)")
+        print("  RDP changes require a full power cycle to take effect.")
+        print("!"*60)
+    elif bootloader_path and firmware_path:
         print("\nDevice is ready to use.")
     elif bootloader_path:
         print("\nBootloader installed. You can now update firmware via USB.")

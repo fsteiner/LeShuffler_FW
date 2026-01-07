@@ -46,6 +46,7 @@ void set_motor_rotation(dc_motor_t, uint16_t, bool);
 void set_latch(bool status);
 void test_exit_latch(void);
 void access_exit_chute(void);
+void dc_motors_run_in(void);
 
 
 #endif /* TB6612FNG_H_ */

@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 // Bootloader version location in flash
-#define BOOTLOADER_VERSION_ADDR   0x0800BFF0
+#define BOOTLOADER_VERSION_ADDR   0x0801FFF0
 #define BOOTLOADER_VERSION_MAGIC  0x424C5652  // "BLVR"
 
 /**

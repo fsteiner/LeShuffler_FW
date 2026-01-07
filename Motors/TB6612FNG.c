@@ -314,7 +314,93 @@ void access_exit_chute(void)
 	return;
 }
 
+void dc_motors_run_in(void)
+{
+	bool DC_toggle = true;
+	extern button encoder_btn;
+	extern button escape_btn;
+	extern dc_motor_t tray_motor;
+	extern dc_motor_t entry_motor;
+	uint32_t start_time;
+	uint32_t remaining_time;
+	uint32_t prev_remaining_time;
+	const uint32_t running_time = 60000;
+	char display_buf[N_DISP_MAX + 1];
+	const uint16_t rodage_speed = 70;
 
+	load_enable();
+	carousel_enable();
+	// Display icons
+	display_encoder_icon(ICON_CHECK);
+	display_escape_icon(ICON_CROSS);
+	reset_btns();
+	while (!escape_btn.interrupt_press && !encoder_btn.interrupt_press)
+	{
+		if (DC_toggle)
+		{
+			start_time = HAL_GetTick();
+			set_motor_rotation(tray_motor, rodage_speed, DC_MTR_FWD);
+			set_motor_rotation(entry_motor, rodage_speed, DC_MTR_FWD);
+			clear_message(TEXT_ERROR);
+			prev_remaining_time = 0;
+			do
+			{
+				remaining_time =
+						HAL_GetTick() < start_time + running_time ?
+								(start_time + running_time - HAL_GetTick())
+										/ 1000 :
+								0;
+
+				snprintf(display_buf, N_DISP_MAX, "Running In Roller Motors\n%2lu s",
+						remaining_time);
+				uint16_t number_width = 50;
+				uint16_t x_pos = (BSP_LCD_GetXSize() - number_width) / 2;
+				uint16_t y_pos = LCD_TOP_ROW
+						+ LCD_ROW_HEIGHT * (MSG_ROW)+ V_ADJUST;
+
+				if (remaining_time != prev_remaining_time)
+				{
+					BSP_LCD_SetTextColor(LCD_COLOR_BCKGND);
+					BSP_LCD_FillRect(x_pos, y_pos + LCD_ROW_HEIGHT / 4,
+							number_width, LCD_ROW_HEIGHT);
+					BSP_LCD_SetTextColor(LCD_COLOR_TEXT);
+					prompt_message(display_buf);
+					prev_remaining_time = remaining_time;
+				}
+				if (escape_btn.interrupt_press || encoder_btn.interrupt_press)
+					break;
+
+			}
+			while (remaining_time > 0);
+
+			// Stop
+			dc_motor_freewheel(tray_motor);
+			dc_motor_freewheel(entry_motor);
+			clear_message(TEXT_ERROR);
+			prompt_message("Stopped.");
+
+		}
+		else
+		{
+			// Stop
+			dc_motor_freewheel(tray_motor);
+			dc_motor_freewheel(entry_motor);
+			clear_message(TEXT_ERROR);
+			prompt_message("Stopped.");
+		}
+		DC_toggle = !DC_toggle;
+		while (!escape_btn.interrupt_press && !encoder_btn.interrupt_press)
+			;
+		reset_btn(&encoder_btn);
+
+	}
+	reset_btn(&escape_btn);
+	dc_motor_freewheel(tray_motor);
+	dc_motor_freewheel(entry_motor);
+	clear_message(TEXT_ERROR);
+
+	return;
+}
 
 
 

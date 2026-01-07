@@ -871,6 +871,13 @@ class EncryptedFirmwareUpdater:
                 print("=" * 60)
                 return False
 
+            # Confirm before proceeding
+            print()
+            confirm = input("  Proceed with update? [Y/n]: ").strip().lower()
+            if confirm == 'n':
+                print("\n  Update cancelled.")
+                return False
+
             # Route to appropriate transfer method
             if is_encrypted:
                 return self._do_encrypted_update(sfu)

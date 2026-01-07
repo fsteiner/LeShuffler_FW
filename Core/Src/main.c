@@ -618,6 +618,10 @@ int main(void)
 					clean_roller(entry_motor);
 					break;
 
+				case DC_MOTORS_RUN_IN:
+					dc_motors_run_in();
+					break;
+
 				case TEST_CAROUSEL:
 					status = test_carousel_motor();
 					break;

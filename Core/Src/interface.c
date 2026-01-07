@@ -147,7 +147,7 @@ item_code_t maintenance_items[] =
 		TEST_MENU, FIRMWARE_UPDATE };
 
 item_code_t maintenance_level_2_items[] =
-{ ABOUT, IMAGE_UTILITY, TEST_IMAGES, TEST_CAROUSEL, ADJUST_CARD_FLAP, SHUFFLE,
+{ ABOUT, IMAGE_UTILITY, TEST_IMAGES, TEST_CAROUSEL, ADJUST_CARD_FLAP, ACCESS_EXIT_CHUTE, DC_MOTORS_RUN_IN, SHUFFLE,
 		EMPTY, LOAD, TEST_EXIT_LATCH, TEST_BUZZER, DISPLAY_SENSORS, TEST_WATCHDOG };
 
 item_code_t test_items[] =
@@ -343,6 +343,8 @@ menu_t test_exist_latch_menu =
 { TEST_EXIT_LATCH, "Test Card Exit Latch", 0, NULL };
 menu_t access_exit_chute_menu =
 { ACCESS_EXIT_CHUTE, "Access Exit Chute", 0, NULL };
+menu_t dc_motors_run_in_menu =
+{ DC_MOTORS_RUN_IN, "DC Motors Run In", 0, NULL };
 menu_t adjust_card_flap_menu =
 { ADJUST_CARD_FLAP, "Adjust Card Flap", 0, NULL };
 menu_t test_buzzer_menu =
@@ -387,7 +389,7 @@ menu_t *menu_list[] =
 
 		&clean_tray_roller_menu, &clean_entry_roller_menu, &test_carousel_menu,
 		&test_carousel_driver_menu, &test_exist_latch_menu,
-		&access_exit_chute_menu, &adjust_card_flap_menu, &test_buzzer_menu,
+		&access_exit_chute_menu, &dc_motors_run_in_menu, &adjust_card_flap_menu, &test_buzzer_menu,
 		&display_sensors_menu, &test_images_menu, &test_watchdog_menu,
 
 		&games_list, &dealers_choice_list };
