@@ -232,16 +232,24 @@ class SFUFile:
             self.error = str(e)
             return False
 
+    def get_version_string(self):
+        """Get firmware version as string (e.g., 'v1.0.1')"""
+        if not self.header:
+            return "unknown"
+        version = self.header['version']
+        major = (version >> 16) & 0xFF
+        minor = (version >> 8) & 0xFF
+        patch = version & 0xFF
+        return f"v{major}.{minor}.{patch}"
+
     def print_info(self):
         """Print SFU file information"""
         if not self.header:
             print("  No header loaded")
             return
 
-        print(f"  SFU Version: 0x{self.header['version']:04X}")
-        print(f"  Original size: {self.header['original_size']} bytes")
-        print(f"  Encrypted size: {self.header['firmware_size']} bytes")
-        print(f"  Header CRC: 0x{self.header['header_crc']:08X}")
+        print(f"  Firmware version: {self.get_version_string()}")
+        print(f"  Size: {self.header['original_size']} bytes")
 
 
 class EncryptedFirmwareUpdater:

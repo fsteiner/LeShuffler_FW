@@ -36,7 +36,42 @@ AES_KEY_SIZE = 32
 AES_IV_SIZE = 16
 AES_BLOCK_SIZE = 16
 ECDSA_SIG_SIZE = 64
-SFU_VERSION = 0x0001
+
+
+def get_firmware_version():
+    """Extract firmware version from version.h (0x00MMmmPP format)"""
+    # Look for version.h relative to this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    version_h = os.path.join(script_dir, '..', 'Core', 'Inc', 'version.h')
+
+    if not os.path.exists(version_h):
+        print(f"WARNING: version.h not found at {version_h}")
+        return 0x00010000  # Default v1.0.0
+
+    major = minor = patch = 0
+    try:
+        with open(version_h, 'r') as f:
+            for line in f:
+                if '#define FW_VERSION_MAJOR' in line:
+                    major = int(line.split()[-1])
+                elif '#define FW_VERSION_MINOR' in line:
+                    minor = int(line.split()[-1])
+                elif '#define FW_VERSION_PATCH' in line:
+                    patch = int(line.split()[-1])
+    except Exception as e:
+        print(f"WARNING: Could not parse version.h: {e}")
+        return 0x00010000
+
+    version = (major << 16) | (minor << 8) | patch
+    return version
+
+
+def format_version(version):
+    """Format version number as string (e.g., 0x00010001 -> 'v1.0.1')"""
+    major = (version >> 16) & 0xFF
+    minor = (version >> 8) & 0xFF
+    patch = version & 0xFF
+    return f"v{major}.{minor}.{patch}"
 
 # Default test keys (MUST match crypto_keys.h in bootloader)
 DEFAULT_AES_KEY = bytes([
@@ -145,6 +180,10 @@ def sign_data(data, private_key_bytes):
 def encrypt_firmware(input_file, output_file, keys):
     """Encrypt firmware and create .sfu file"""
 
+    # Get firmware version from version.h
+    fw_version = get_firmware_version()
+    print(f"Firmware version: {format_version(fw_version)}")
+
     # Read input firmware
     with open(input_file, 'rb') as f:
         firmware = f.read()
@@ -177,7 +216,7 @@ def encrypt_firmware(input_file, output_file, keys):
     # struct: magic(4) + version(4) + firmware_size(4) + original_size(4) + iv(16) + signature(64) + crc(4)
     header_without_crc = struct.pack('<IIII',
         SFU_MAGIC,
-        SFU_VERSION,
+        fw_version,  # Firmware version from version.h
         encrypted_size,
         original_size
     ) + iv + signature

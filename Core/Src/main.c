@@ -43,6 +43,7 @@
 #include <TMC2209.h>
 #include "usbd_cdc_if.h"
 #include <utilities.h>
+#include <version.h>
 #include "iwdg.h"
 
 #include "tests.h"
@@ -657,12 +658,16 @@ int main(void)
 					break;
 
 				case FIRMWARE_UPDATE:
-					// General warning
+					// General warning with current version
 					clear_text();
 					extern icon_set_t icon_set_check;
+					char fw_warning[80];
+					snprintf(fw_warning, sizeof(fw_warning),
+							"Current version: %s\nWill be erased. Continue?",
+							GetFirmwareVersionString());
 					user_input = prompt_interface(WARNING, CUSTOM_MESSAGE,
-							"Firmware will be entirely erased\nAre you sure?",
-							icon_set_check, ICON_BACK, BUTTON_PRESS);
+							fw_warning,
+							icon_set_check, ICON_CROSS, BUTTON_PRESS);
 					if (user_input == LS_OK)
 					{
 						// Check safety code
