@@ -7,6 +7,7 @@
 #include <basic_operations.h>
 #include <buttons.h>
 #include <interface.h>
+#include <iwdg.h>
 #include <servo_motor.h>
 #include <TB6612FNG.h>
 
@@ -345,6 +346,7 @@ void dc_motors_run_in(void)
 			prev_remaining_time = 0;
 			do
 			{
+				watchdog_refresh();
 				remaining_time =
 						HAL_GetTick() < start_time + running_time ?
 								(start_time + running_time - HAL_GetTick())
@@ -353,16 +355,15 @@ void dc_motors_run_in(void)
 
 				snprintf(display_buf, N_DISP_MAX, "Running In Roller Motors\n%2lu s",
 						remaining_time);
-				uint16_t number_width = 50;
-				uint16_t x_pos = (BSP_LCD_GetXSize() - number_width) / 2;
+				// y position for the second line (where countdown appears)
 				uint16_t y_pos = LCD_TOP_ROW
-						+ LCD_ROW_HEIGHT * (MSG_ROW)+ V_ADJUST;
+						+ LCD_ROW_HEIGHT * (MSG_ROW + 1) + V_ADJUST;
 
 				if (remaining_time != prev_remaining_time)
 				{
+					// Clear the countdown line before redrawing
 					BSP_LCD_SetTextColor(LCD_COLOR_BCKGND);
-					BSP_LCD_FillRect(x_pos, y_pos + LCD_ROW_HEIGHT / 4,
-							number_width, LCD_ROW_HEIGHT);
+					BSP_LCD_FillRect(0, y_pos, BUTTON_ICON_X, LCD_ROW_HEIGHT);
 					BSP_LCD_SetTextColor(LCD_COLOR_TEXT);
 					prompt_message(display_buf);
 					prev_remaining_time = remaining_time;
@@ -390,7 +391,7 @@ void dc_motors_run_in(void)
 		}
 		DC_toggle = !DC_toggle;
 		while (!escape_btn.interrupt_press && !encoder_btn.interrupt_press)
-			;
+			watchdog_refresh();
 		reset_btn(&encoder_btn);
 
 	}

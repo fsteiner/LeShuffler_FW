@@ -639,7 +639,11 @@ int main(void)
 					break;
 
 				case ADJUST_CARD_FLAP:
-					status = adjust_card_flap();
+					status = adjust_card_flap_full();
+					break;
+
+				case ADJUST_CARD_FLAP_LIMITED:
+					status = adjust_card_flap_limited();
 					break;
 
 				case TEST_BUZZER:

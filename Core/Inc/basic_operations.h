@@ -121,7 +121,7 @@ return_code_t load_max_n_cards(uint8_t, rand_mode_t, uint16_t*);
 return_code_t load_carousel(rand_mode_t, uint16_t*);
 return_code_t load_to_n_cards(uint8_t, rand_mode_t, uint16_t*);
 return_code_t load_double_deck(uint16_t*);
-return_code_t adjust_flap(uint32_t*);
+return_code_t adjust_flap(uint32_t*, int8_t min_adjust, int8_t max_adjust);
 void mr_init(move_report_t*);
 void er_init(eject_report_t*);
 void lr_init(load_report_t*);

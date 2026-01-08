@@ -1650,14 +1650,25 @@ int16_t read_encoder(bool direction)
 	return increment;
 }
 
-return_code_t adjust_flap(uint32_t *p_ref_pos)
+return_code_t adjust_flap(uint32_t *p_ref_pos, int8_t min_adjust, int8_t max_adjust)
 {
 	return_code_t ret_val = LS_OK;
 	int16_t increment;
 	uint32_t final_pos = *p_ref_pos;
+	uint32_t start_pos = *p_ref_pos;
 	uint8_t w_data;
 	extern char display_buf[];
 	extern uint32_t flap_open_pos;
+
+	// Check if unlimited mode (0,0 means no limits)
+	bool unlimited = (min_adjust == 0 && max_adjust == 0);
+
+	// Calculate min/max allowed positions
+	uint32_t min_pos = unlimited ? 0 :
+			(start_pos > (uint32_t)(-min_adjust * FLAP_FACTOR)) ?
+			start_pos + min_adjust * FLAP_FACTOR : 0;
+	uint32_t max_pos = unlimited ? UINT32_MAX :
+			start_pos + max_adjust * FLAP_FACTOR;
 
 	set_flap(*p_ref_pos);
 	reset_btns();
@@ -1671,19 +1682,26 @@ return_code_t adjust_flap(uint32_t *p_ref_pos)
 		while ((increment = read_encoder(CLK_WISE)) == 0
 				&& !encoder_btn.interrupt_press && !escape_btn.interrupt_press)
 			watchdog_refresh();
-		if (increment > 0
-				|| (increment < 0
-						&& (uint32_t) (-increment * FLAP_FACTOR) < final_pos))
+
+		// Calculate new position
+		int32_t new_pos = (int32_t)final_pos + increment * FLAP_FACTOR;
+
+		// Prevent negative
+		if (new_pos < 0)
+			new_pos = 0;
+
+		// Clamp to min/max range (skip if unlimited)
+		if (!unlimited)
 		{
-			final_pos += (uint32_t) (increment * FLAP_FACTOR);
-			set_flap(final_pos);
-			snprintf(display_buf, N_DISP_MAX, "Position:  %d",
-					(uint8_t) (final_pos / FLAP_FACTOR));
-			prompt_basic_item(display_buf, 1);
+			if ((uint32_t)new_pos < min_pos)
+				new_pos = min_pos;
+			if ((uint32_t)new_pos > max_pos)
+				new_pos = max_pos;
 		}
-		else if (increment < 0)
+
+		if ((uint32_t)new_pos != final_pos)
 		{
-			final_pos = 0;
+			final_pos = (uint32_t)new_pos;
 			set_flap(final_pos);
 			snprintf(display_buf, N_DISP_MAX, "Position:  %d",
 					(uint8_t) (final_pos / FLAP_FACTOR));
@@ -1703,8 +1721,8 @@ return_code_t adjust_flap(uint32_t *p_ref_pos)
 			prompt_basic_item("Saved", 2);
 			HAL_Delay(200);
 		}
-		else
-			set_flap(*p_ref_pos);
+		// Note: removed "else set_flap(*p_ref_pos)" which incorrectly reset
+		// position when hitting min/max limits
 	}
 	reset_btns();
 
