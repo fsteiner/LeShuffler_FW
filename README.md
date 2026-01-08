@@ -112,6 +112,30 @@ python stlink_flasher.py --firmware-only  # Firmware only
 
 **Requires:** [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html)
 
+### stlink_standalone_flasher.py (Windows)
+
+Lightweight ST-LINK flasher for end-user recovery. No STM32CubeProgrammer installation required.
+
+Uses [stlink tools](https://github.com/stlink-org/stlink/releases) (`st-flash.exe`) instead.
+
+```bash
+python stlink_standalone_flasher.py              # Flash both
+python stlink_standalone_flasher.py --firmware   # Firmware only
+python stlink_standalone_flasher.py --erase      # Mass erase only
+```
+
+**Distribution package for end users** (~10 MB):
+```
+LeShuffler_Recovery/
+├── LeShuffler_STLink_Flasher.exe    # Built with PyInstaller
+├── st-flash.exe                      # From stlink-org/stlink
+├── LeShuffler_Bootloader_E.bin
+├── LeShuffler.bin
+└── README.txt
+```
+
+See `Tools/STANDALONE_FLASHER_README.md` for build instructions.
+
 ## Production Workflow
 
 ### 1. Development (RDP Level 0)

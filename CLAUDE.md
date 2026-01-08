@@ -14,11 +14,12 @@ LeShuffler/
 ├── Core/                  # Application firmware
 ├── Bootloader_E/          # Encrypted bootloader (v3.0) - ACTIVE
 ├── Tools/
-│   ├── firmware_updater.py      # USB updater (encrypted + legacy)
-│   ├── encrypt_firmware.py      # Creates .sfu files
-│   ├── stlink_flasher.py        # Factory ST-LINK flasher
-│   ├── LeShuffler.bin           # Plain firmware
-│   ├── LeShuffler.sfu           # Encrypted firmware
+│   ├── firmware_updater.py           # USB updater (encrypted + legacy)
+│   ├── encrypt_firmware.py           # Creates .sfu files
+│   ├── stlink_flasher.py             # Factory ST-LINK flasher (requires STM32CubeProg)
+│   ├── stlink_standalone_flasher.py  # Standalone flasher (Windows, no install)
+│   ├── LeShuffler.bin                # Plain firmware
+│   ├── LeShuffler.sfu                # Encrypted firmware
 │   └── LeShuffler_Bootloader_E.bin
 ├── Legacy/
 │   ├── Bootloader/              # Non-encrypted bootloader (old devices)
@@ -119,6 +120,13 @@ HAL_HASH_Init(&hhash);
 - `stm32h7xx_hal_conf.h` - HAL module enables
 - `cryp.c/h`, `hash.c/h`, `rng.c/h` - manually created
 
+## Reference Files
+
+When updating documentation, update all three "reference files":
+- `CLAUDE.md` - Quick reference for Claude
+- `README.md` - Project documentation
+- `SESSION_LOG.md` - Development history
+
 ## Session History
 
-See `SESSION_LOG.md` for full development history (21 sessions).
+See `SESSION_LOG.md` for full development history (22 sessions).

@@ -2191,6 +2191,61 @@ Create Windows executable for `firmware_updater.py` using PyInstaller (for field
 
 ---
 
+### 2025-01-09: Session 22 - Documentation Cleanup & Standalone Flasher
+
+#### Documentation Reorganization:
+
+Split large CLAUDE.md (2305 lines) into focused files:
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `CLAUDE.md` | 132 | Quick reference for Claude |
+| `SESSION_LOG.md` | 2219 | Full development history |
+| `README.md` | 220 | Project documentation |
+
+These are collectively called "reference files" - update all three when making doc changes.
+
+#### Key Security Change:
+
+**Production keys moved to 1Password only:**
+- Deleted `~/.leshuffler_keys/` folder
+- `crypto_keys.h` contains only placeholders (zeros)
+- `crypto_keys.h` is both gitignored AND Dropbox-ignored
+- Purged old versions from Dropbox version history
+
+#### Standalone ST-LINK Flasher (Windows):
+
+Created lightweight flasher for end-user recovery without STM32CubeProgrammer:
+
+**Files created:**
+- `Tools/stlink_standalone_flasher.py` - Python script
+- `Tools/STANDALONE_FLASHER_README.md` - Build instructions
+
+**Uses:** [stlink tools](https://github.com/stlink-org/stlink/releases) (`st-flash.exe`)
+
+**Distribution package** (~10 MB vs 500 MB for STM32CubeProgrammer):
+```
+LeShuffler_Recovery/
+├── LeShuffler_STLink_Flasher.exe    # Built with PyInstaller
+├── st-flash.exe                      # From stlink-org/stlink
+├── LeShuffler_Bootloader_E.bin
+├── LeShuffler.bin
+└── README.txt
+```
+
+**Build command (Windows):**
+```powershell
+cd Tools
+python -m PyInstaller --onefile --name "LeShuffler_STLink_Flasher" stlink_standalone_flasher.py
+```
+
+#### Git Commits:
+- `6374da5` - Split CLAUDE.md into compact reference + SESSION_LOG.md
+- `cc64065` - Update README: production keys in 1Password only
+- `[pending]` - Add standalone ST-LINK flasher
+
+---
+
 ### STM32H7 HAL Notes
 
 #### HASH Peripheral (STM32H7)
