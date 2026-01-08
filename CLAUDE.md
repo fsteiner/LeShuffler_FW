@@ -2181,6 +2181,40 @@ while ((check_bytes == 0xffffffff));  // Infinite loop if TMC2209 not responding
 c2ee0c9 Merge branch 'patch'
 ```
 
+#### Legacy Folder Reorganization:
+
+Moved legacy (non-encrypted) files to `Legacy/` folder for clarity:
+
+| From | To |
+|------|-----|
+| `Bootloader/` | `Legacy/Bootloader/` |
+| `Tools/firmware_updater_v5_1.py` | `Legacy/Tools/firmware_updater_legacy.py` |
+| `Tools/firmware_updater_encrypted.py` | `Tools/firmware_updater.py` |
+
+**Current Project Structure:**
+```
+LeShuffler/
+├── Bootloader_E/              # Current encrypted bootloader (v3.0)
+├── Tools/
+│   ├── firmware_updater.py    # Main updater (encrypted + legacy fallback)
+│   ├── encrypt_firmware.py    # Creates .sfu files
+│   ├── stlink_flasher.py      # Factory ST-LINK flasher
+│   ├── LeShuffler.bin         # Plain firmware (for ST-LINK)
+│   ├── LeShuffler.sfu         # Encrypted firmware (for USB update)
+│   └── LeShuffler_Bootloader_E.bin  # Bootloader binary
+├── Legacy/
+│   ├── Bootloader/            # Non-encrypted bootloader (for old devices)
+│   └── Tools/
+│       └── firmware_updater_legacy.py  # Non-encrypted updater
+├── Core/                      # Application firmware source
+└── ...
+```
+
+**Git Commit:**
+```
+f815e39 Move legacy bootloader and updater to Legacy folder
+```
+
 ---
 
 ### STM32H7 HAL Notes
