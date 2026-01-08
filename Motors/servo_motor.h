@@ -33,6 +33,8 @@ void flap_open(void);
 void flap_close(void);
 void flap_mid(void);
 return_code_t flap_init(TIM_HandleTypeDef *, uint32_t);
-return_code_t adjust_card_flap(void);
+return_code_t adjust_card_flap(int8_t min_adjust, int8_t max_adjust);
+return_code_t adjust_card_flap_limited(void);
+return_code_t adjust_card_flap_full(void);
 
 #endif /* SERVOMOTOR_H_ */

@@ -618,6 +618,10 @@ int main(void)
 					clean_roller(entry_motor);
 					break;
 
+				case DC_MOTORS_RUN_IN:
+					dc_motors_run_in();
+					break;
+
 				case TEST_CAROUSEL:
 					status = test_carousel_motor();
 					break;
@@ -635,7 +639,11 @@ int main(void)
 					break;
 
 				case ADJUST_CARD_FLAP:
-					status = adjust_card_flap();
+					status = adjust_card_flap_full();
+					break;
+
+				case ADJUST_CARD_FLAP_LIMITED:
+					status = adjust_card_flap_limited();
 					break;
 
 				case TEST_BUZZER:

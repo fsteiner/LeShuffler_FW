@@ -154,7 +154,7 @@ void flap_mid(void)
     return;
 }
 
-return_code_t adjust_card_flap(void)
+return_code_t adjust_card_flap(int8_t min_adjust, int8_t max_adjust)
 {
 	// p_ref_pos is either &flap_open_pos or &flap_closed_pos
 
@@ -164,10 +164,10 @@ return_code_t adjust_card_flap(void)
     // reset_flap_defaults();
     flap_init(SERVO_PWM_CH);
     prompt_basic_item("OPEN    ", 0);
-    if ((ret_val = adjust_flap(&flap_open_pos)) != LS_OK)
+    if ((ret_val = adjust_flap(&flap_open_pos, min_adjust, max_adjust)) != LS_OK)
     	goto _EXIT;
     prompt_basic_item("CLOSED    ", 0);
-    if ((ret_val = adjust_flap(&flap_closed_pos)) != LS_OK)
+    if ((ret_val = adjust_flap(&flap_closed_pos, min_adjust, max_adjust)) != LS_OK)
        	goto _EXIT;
     flap_mid_pos = flap_closed_pos - FLAP_CLOSED_TO_MID;
     clear_text();
@@ -176,4 +176,16 @@ return_code_t adjust_card_flap(void)
 
 	return ret_val;
 
+}
+
+return_code_t adjust_card_flap_limited(void)
+{
+	// Limited adjustment: -3 to +3 range (for MAINTENANCE menu)
+	return adjust_card_flap(-3, 3);
+}
+
+return_code_t adjust_card_flap_full(void)
+{
+	// Full adjustment: no limits (for MAINTENANCE_LEVEL_2 menu)
+	return adjust_card_flap(0, 0);
 }
