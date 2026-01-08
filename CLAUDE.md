@@ -2210,6 +2210,46 @@ f815e39 Move legacy bootloader and updater to Legacy folder
 
 ---
 
+### 2025-01-08: Session 21 - RDP1 Verification & v1.0.1 Release
+
+#### RDP Level 1 Testing:
+- ✅ Set RDP1 via STM32CubeProgrammer (`RDP=0xBB`)
+- ✅ Application boots correctly with RDP1 active
+- ✅ Flash read blocked (debugger returns error)
+- ✅ USB firmware update works with encrypted .sfu file
+- ✅ Production keys verified working
+
+#### Git Tag Created:
+```
+v1.0.1 - Production release with encrypted bootloader
+```
+
+**Release includes:**
+- Encrypted USB firmware updates (AES-256-CBC + ECDSA-P256)
+- Bootloader v3.0 with signature verification
+- RDP Level 1 support for flash protection
+- Firmware version system (v1.0.1)
+- Watchdog protection throughout
+- Limited card flap adjustment (±3) in MAINTENANCE menu
+- Legacy bootloader support with auto-fallback
+
+#### Factory Programming:
+```bash
+python stlink_flasher.py --rdp 1 -y
+```
+
+Files needed on production machine:
+- `stlink_flasher.py`
+- `LeShuffler.bin`
+- `LeShuffler_Bootloader_E.bin`
+
+Requirement: STM32CubeProgrammer installed
+
+#### Next Step:
+Create Windows executable for `firmware_updater.py` using PyInstaller (for field updates).
+
+---
+
 ### STM32H7 HAL Notes
 
 #### HASH Peripheral (STM32H7)
