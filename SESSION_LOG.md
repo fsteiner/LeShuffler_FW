@@ -2275,7 +2275,8 @@ Deleted orphan `Bootloader/.project` file left behind after moving to `Legacy/Bo
 #### Git Commits:
 - `6374da5` - Split CLAUDE.md into compact reference + SESSION_LOG.md
 - `cc64065` - Update README: production keys in 1Password only
-- `[pending]` - Add standalone flasher, remote recovery flasher, reference file updates
+- `1c3692e` - Add standalone ST-LINK flasher for Windows end-users
+- `14710dc` - Add remote recovery flasher and update documentation
 
 ---
 
