@@ -191,6 +191,10 @@ Stored at fixed address `0x0800BFF0`. Application can read via `GetBootloaderVer
 
 Production devices use **RDP Level 1**.
 
+## Development History
+
+See `SESSION_LOG.md` for the full development history of the encrypted bootloader system (21 sessions covering bootloader versions, crypto implementation, debugging, and production setup).
+
 ## License
 
 Proprietary - All rights reserved.
