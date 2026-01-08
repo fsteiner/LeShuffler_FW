@@ -652,7 +652,15 @@ LeShuffler_FW/LeShuffler/          (git repo)
 
 **ALWAYS verify file/folder operations**: After creating, deleting, or modifying files/folders, run a verification command (e.g., `dir`, `Get-ChildItem`) to confirm the operation succeeded before telling the user it's done. Windows commands can fail silently - never assume success.
 
-**ALWAYS keep Tools folder files in sync**: When updating firmware files in the `Tools/` folder, ALWAYS copy both `LeShuffler.bin` AND `LeShuffler.sfu` together. Never update one without the other - mismatched versions cause confusion.
+**ALWAYS check Tools binaries are up to date before using them**:
+1. Compare timestamps: `ls -la Tools/*.bin Debug/*.bin Bootloader_E/Debug/*.bin`
+2. If Debug is newer, update Tools:
+   ```bash
+   cp Debug/LeShuffler.bin Tools/
+   python3 Tools/encrypt_firmware.py Tools/LeShuffler.bin Tools/LeShuffler.sfu --keys Tools/test_keys.json
+   ```
+3. **CRITICAL**: `.sfu` must always be regenerated from `.bin` - never update one without the other
+4. Mismatched versions cause confusion and failed updates
 
 **STM32_Programmer_CLI on Mac**:
 ```bash
