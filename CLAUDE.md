@@ -657,10 +657,10 @@ LeShuffler_FW/LeShuffler/          (git repo)
 2. If Debug is newer, update Tools:
    ```bash
    cp Debug/LeShuffler.bin Tools/
-   python3 Tools/encrypt_firmware.py Tools/LeShuffler.bin Tools/LeShuffler.sfu --keys Tools/test_keys.json
+   python3 Tools/encrypt_firmware.py Tools/LeShuffler.bin Tools/LeShuffler.sfu --keys /Users/fs/.leshuffler_keys/production_keys.json
    ```
-3. **CRITICAL**: `.sfu` must always be regenerated from `.bin` - never update one without the other
-4. Mismatched versions cause confusion and failed updates
+3. **CRITICAL**: `.sfu` must always be regenerated from `.bin` using **production keys** - never use test_keys.json
+4. Mismatched versions or keys cause failed updates
 
 **STM32_Programmer_CLI on Mac**:
 ```bash
@@ -1986,45 +1986,30 @@ uint32_t GetFirmwareVersion(void);             // Returns 0x00010001
    *.sfu
    ```
 
-4. **Local key storage:** `/Users/fs/LeShuffler_Keys/` (outside Dropbox)
+4. **Local key storage:** `/Users/fs/.leshuffler_keys/production_keys.json` (hidden folder, outside Dropbox)
 
 5. **Backup:** Store `production_keys.json` in 1Password
 
-#### Development Setup (Test Keys):
+#### Production Keys (ACTIVE):
 
-`crypto_keys.h` is gitignored. To build Bootloader_E:
+Keys are generated and in use. To create .sfu files:
 ```bash
-cd Bootloader_E/Core/Inc
-cp crypto_keys.h.template crypto_keys.h
+python3 Tools/encrypt_firmware.py Tools/LeShuffler.bin Tools/LeShuffler.sfu --keys /Users/fs/.leshuffler_keys/production_keys.json
 ```
-This creates placeholder keys (all zeros) - builds but won't decrypt real .sfu files.
 
-#### Production Keys Workflow:
+**IMPORTANT:** Always use production keys for .sfu generation. The `test_keys.json` in Tools is for development only and does NOT match the bootloader.
 
-**Keys NOT generated yet.** When ready:
-```bash
-# 1. Create local folder (outside Dropbox)
-mkdir -p /Users/fs/LeShuffler_Keys
+#### Development Setup (if rebuilding Bootloader_E):
 
-# 2. Generate production keys
-python Tools/encrypt_firmware.py --generate-keys /Users/fs/LeShuffler_Keys/production_keys.json
-
-# 3. Copy keys to crypto_keys.h:
-#    - Open production_keys.json
-#    - Copy aes_key array → paste into AES_KEY[32] in crypto_keys.h
-#    - Copy ecdsa_public_key array → paste into ECDSA_PUBLIC_KEY[64]
-
-# 4. Save production_keys.json to 1Password
-
-# 5. Rebuild Bootloader_E
-
-# 6. Create matching .sfu files:
-python Tools/encrypt_firmware.py LeShuffler.bin LeShuffler.sfu --keys /Users/fs/LeShuffler_Keys/production_keys.json
-```
+`crypto_keys.h` is gitignored. To build with production keys:
+1. Copy keys from `/Users/fs/.leshuffler_keys/production_keys.json`
+2. Paste `aes_key` array → `AES_KEY[32]` in `crypto_keys.h`
+3. Paste `ecdsa_public_key` array → `ECDSA_PUBLIC_KEY[64]`
+4. Rebuild Bootloader_E
 
 #### Unified Firmware Updater:
 
-**Updated:** `Tools/firmware_updater_encrypted.py` → v2.0 (Unified)
+**Current:** `Tools/firmware_updater.py` (v2.0 - renamed from firmware_updater_encrypted.py)
 
 Now supports both file types with auto-fallback:
 | File | Bootloader | Transfer Method |
