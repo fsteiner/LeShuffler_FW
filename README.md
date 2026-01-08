@@ -136,6 +136,43 @@ LeShuffler_Recovery/
 
 See `Tools/STANDALONE_FLASHER_README.md` for build instructions.
 
+### remote_recovery_flasher.py (Remote Support)
+
+**Why not distribute the bootloader binary?** The bootloader contains the AES-256 key. Anyone with the bootloader could decrypt .sfu files and extract the firmware.
+
+**Solution:** Remote support session (TeamViewer/AnyDesk) where you control the flashing.
+
+#### Build the remote flasher (one-time)
+
+```powershell
+cd Tools
+# Ensure LeShuffler_Bootloader_E.bin is present
+python build_remote_flasher.py
+# Output: dist/LeShuffler_Remote_Recovery.exe (~8 MB)
+```
+
+#### Remote recovery workflow
+
+1. Client downloads [TeamViewer QuickSupport](https://www.teamviewer.com/en/download/windows/) (portable, no install)
+2. Client connects ST-LINK to device's SWD port
+3. Client shares TeamViewer session ID with you
+4. You connect remotely and transfer `LeShuffler_Remote_Recovery.exe`
+5. You run the exe and type `FLASH` to confirm
+6. Tool flashes bootloader + sets RDP Level 1
+7. **Tool securely deletes itself** (3-pass overwrite)
+8. Client disconnects ST-LINK and does normal USB firmware update with .sfu file
+
+**Requirements on client machine:**
+- OpenOCD installed OR `openocd.exe` in same folder
+- ST-LINK V2 or V3 adapter
+
+**Security features:**
+- Bootloader binary embedded in exe (base64), extracted to temp folder
+- 3-pass random data overwrite before deletion (unrecoverable)
+- Exe deletes itself after completion
+
+Download OpenOCD for Windows: https://github.com/openocd-org/openocd/releases
+
 ## Production Workflow
 
 ### 1. Development (RDP Level 0)

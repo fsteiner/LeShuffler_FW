@@ -17,7 +17,9 @@ LeShuffler/
 │   ├── firmware_updater.py           # USB updater (encrypted + legacy)
 │   ├── encrypt_firmware.py           # Creates .sfu files
 │   ├── stlink_flasher.py             # Factory ST-LINK flasher (requires STM32CubeProg)
-│   ├── stlink_standalone_flasher.py  # Standalone flasher (Windows, no install)
+│   ├── stlink_standalone_flasher.py  # Standalone flasher (Windows, uses st-flash)
+│   ├── remote_recovery_flasher.py    # Remote support flasher (self-deleting)
+│   ├── build_remote_flasher.py       # Build script for remote flasher
 │   ├── LeShuffler.bin                # Plain firmware
 │   ├── LeShuffler.sfu                # Encrypted firmware
 │   └── LeShuffler_Bootloader_E.bin
@@ -119,6 +121,28 @@ HAL_HASH_Init(&hhash);
 **DO NOT regenerate code in `Bootloader_E/`** - manual modifications will be lost:
 - `stm32h7xx_hal_conf.h` - HAL module enables
 - `cryp.c/h`, `hash.c/h`, `rng.c/h` - manually created
+
+## Remote Recovery (for bricked devices)
+
+**Why not distribute bootloader .bin?** It contains the AES key - anyone could decrypt .sfu files.
+
+**Solution:** Remote support session where you control the flashing.
+
+**Build the remote flasher (one-time, on your Windows PC):**
+```powershell
+cd Tools
+python build_remote_flasher.py
+# Output: dist/LeShuffler_Remote_Recovery.exe
+```
+
+**Remote recovery flow:**
+1. Client downloads TeamViewer QuickSupport (portable, no install)
+2. Client connects ST-LINK to device, shares session ID with you
+3. You connect, transfer exe, run it (type "FLASH" to confirm)
+4. Bootloader flashed + RDP1 set + **exe securely self-deletes**
+5. Client runs USB updater with .sfu file
+
+**Security:** Bootloader embedded in exe, extracted to temp, 3-pass overwrite before deletion.
 
 ## Reference Files
 

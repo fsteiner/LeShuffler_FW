@@ -2239,10 +2239,43 @@ cd Tools
 python -m PyInstaller --onefile --name "LeShuffler_STLink_Flasher" stlink_standalone_flasher.py
 ```
 
+#### Remote Recovery Flasher (Security Solution):
+
+**Problem identified:** Distributing `LeShuffler_Bootloader_E.bin` would expose the AES-256 key, allowing anyone to decrypt .sfu files.
+
+**Solution:** Remote support session (TeamViewer/AnyDesk) with self-deleting flasher.
+
+**Files created:**
+- `Tools/remote_recovery_flasher.py` - Self-deleting flasher that embeds bootloader
+- `Tools/build_remote_flasher.py` - Build script to embed bootloader + create exe
+
+**Key features:**
+- Bootloader embedded as base64 in executable
+- Uses OpenOCD for flashing (can set RDP Level 1, unlike st-flash)
+- 3-pass random overwrite before file deletion (unrecoverable)
+- Exe self-deletes after completion (Windows: via batch script)
+
+**Build:**
+```powershell
+cd Tools
+python build_remote_flasher.py
+# Output: dist/LeShuffler_Remote_Recovery.exe
+```
+
+**Remote recovery workflow:**
+1. Client downloads TeamViewer QuickSupport (portable, no install)
+2. Client connects ST-LINK to device, shares session ID
+3. You connect, transfer exe, run it (type "FLASH" to confirm)
+4. Bootloader flashed + RDP1 set + exe securely deleted
+5. Client runs USB updater with .sfu file
+
+#### Orphan Bootloader/ Folder:
+Deleted orphan `Bootloader/.project` file left behind after moving to `Legacy/Bootloader/`.
+
 #### Git Commits:
 - `6374da5` - Split CLAUDE.md into compact reference + SESSION_LOG.md
 - `cc64065` - Update README: production keys in 1Password only
-- `[pending]` - Add standalone ST-LINK flasher
+- `[pending]` - Add standalone flasher, remote recovery flasher, reference file updates
 
 ---
 
