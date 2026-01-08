@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <utilities.h>
+#include <iwdg.h>
 
 // DEBUGGING
 #include <buttons.h>
@@ -151,7 +152,10 @@ return_code_t tmc2209_init()
 			goto _EXIT;
 
 		do
+		{
+			watchdog_refresh();
 			check_bytes = tmc2209_read(ADDRESS_GCONF);
+		}
 		while ((check_bytes == 0xffffffff));
 
 		if (n_trials++ > n_trials_max)
@@ -171,7 +175,10 @@ return_code_t tmc2209_init()
 			goto _EXIT;
 
 		do
+		{
+			watchdog_refresh();
 			check_bytes = tmc2209_read(ADDRESS_PWMCONF);
+		}
 		while ((check_bytes == 0xffffffff));
 
 		if (n_trials++ > n_trials_max)
@@ -192,7 +199,10 @@ return_code_t tmc2209_init()
 			goto _EXIT;
 
 		do
+		{
+			watchdog_refresh();
 			check_bytes = tmc2209_read(ADDRESS_CHOPCONF);
+		}
 		while ((check_bytes == 0xffffffff));
 
 		if (n_trials++ > n_trials_max)
@@ -225,7 +235,10 @@ return_code_t tmc2209_set_standstill_mode(
 {
 	tmc2209_pwmconf_t pwmconf_;
 	do
+	{
+		watchdog_refresh();
 		pwmconf_.bytes = tmc2209_read(ADDRESS_PWMCONF);
+	}
 	while (pwmconf_.bytes == 0xFFFFFFFF);
 	pwmconf_.freewheel = standstill_mode;
 
@@ -239,6 +252,7 @@ return_code_t tmc2209_set_stepper_direction(bool direction)
 
 	do
 	{
+		watchdog_refresh();
 		gconf_.bytes = tmc2209_read(ADDRESS_GCONF);
 		counter++;
 	}
@@ -465,7 +479,7 @@ return_code_t test_carousel_motor(void)
 		}
 		toggle = !toggle;
 		while (!escape_btn.interrupt_press && !encoder_btn.interrupt_press)
-			;
+			watchdog_refresh();
 		reset_btn(&encoder_btn);
 
 	}
@@ -502,7 +516,7 @@ void test_carousel_driver(void)
 		}
 		toggle = !toggle;
 		while (!escape_btn.interrupt_press && !encoder_btn.interrupt_press)
-			;
+			watchdog_refresh();
 		reset_btn(&encoder_btn);
 
 	}
