@@ -123,20 +123,21 @@ python stlink_flasher.py --firmware-only  # Firmware only
 ### 2. Generate Production Keys
 
 ```bash
-# Create secure folder (outside Dropbox/Git)
-mkdir -p ~/LeShuffler_Keys
+# Generate keys to a temporary location
+python Tools/encrypt_firmware.py --generate-keys /tmp/production_keys.json
 
-# Generate keys
-python Tools/encrypt_firmware.py --generate-keys ~/LeShuffler_Keys/production_keys.json
-
-# Backup to password manager (1Password, etc.)
+# IMMEDIATELY save to 1Password, then delete local copy
+# Keys should ONLY exist in 1Password - never on filesystem
+rm /tmp/production_keys.json
 ```
 
 ### 3. Build with Production Keys
 
-1. Copy AES key and ECDSA public key from `production_keys.json`
-2. Paste into `Bootloader_E/Core/Inc/crypto_keys.h`
-3. Rebuild Bootloader_E project
+1. Open 1Password → find `production_keys.json`
+2. Copy `aes_key` array → paste into `AES_KEY[32]` in `crypto_keys.h`
+3. Copy `ecdsa_public_key` array → paste into `ECDSA_PUBLIC_KEY[64]`
+4. Rebuild Bootloader_E project
+5. **Revert crypto_keys.h to placeholders after build**
 
 ### 4. Factory Flash (RDP Level 1)
 
@@ -173,11 +174,13 @@ Stored at fixed address `0x0800BFF0`. Application can read via `GetBootloaderVer
 | Key | Location | Purpose |
 |-----|----------|---------|
 | AES-256 | `crypto_keys.h` (bootloader flash) | Decrypt firmware |
-| ECDSA Private | `production_keys.json` (offline only) | Sign firmware |
+| ECDSA Private | **1Password only** | Sign firmware |
 | ECDSA Public | `crypto_keys.h` (bootloader flash) | Verify signature |
 
+**Production keys** (`production_keys.json`) are stored **only in 1Password** - never on filesystem.
+
 **Never commit:**
-- `crypto_keys.h` (real keys)
+- `crypto_keys.h` (with real keys)
 - `*_keys.json` (key files)
 - `*.pem` (exported keys)
 
