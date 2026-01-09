@@ -340,6 +340,28 @@ Stored at fixed address `0x0800BFF0`. Application can read via `GetBootloaderVer
 
 Production devices use **RDP Level 1**.
 
+### Firmware Distribution Summary
+
+| Device Type | Updater | What to Distribute | Protection |
+|-------------|---------|-------------------|------------|
+| v3.0+ (encrypted) | `LeShuffler_Updater.exe` | exe + `.sfu` file | AES-256 encryption + RDP1 |
+| v1.x/v2.x (legacy) | `LeShuffler_Legacy_Updater.exe` | exe only | Auto-RDP1 after update |
+
+### Reverse Engineering Risk Assessment
+
+| Attack Vector | Encrypted (v3.0) | Legacy (after v1.0.2 update) | Legacy (before update) |
+|---------------|------------------|------------------------------|------------------------|
+| Intercept update file | ❌ AES-256 encrypted | N/A | N/A |
+| Copy .bin file | N/A | ❌ Embedded + deleted | ⚠️ Vulnerable if distributed |
+| Read flash via ST-LINK | ❌ RDP1 blocks | ❌ RDP1 auto-set | ⚠️ RDP0 allows read |
+| Extract from exe memory | N/A | ⚠️ Difficult but possible | N/A |
+| Hardware attack (chip decap) | ⚠️ Very expensive | ⚠️ Very expensive | ⚠️ Very expensive |
+
+**Summary:**
+- **Encrypted devices (v3.0+)**: Fully protected by encryption and RDP1
+- **Legacy devices after update**: Protected by RDP1 (auto-set by firmware v1.0.2+)
+- **Legacy devices before update**: Vulnerable until updated to v1.0.2+
+
 ## Development History
 
 See `SESSION_LOG.md` for the full development history of the encrypted bootloader system (21 sessions covering bootloader versions, crypto implementation, debugging, and production setup).

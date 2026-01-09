@@ -148,25 +148,31 @@ python build_remote_flasher.py
 
 ## Firmware Distribution
 
+| Device Type | Updater | Distribute | Protection |
+|-------------|---------|------------|------------|
+| v3.0+ (encrypted) | `LeShuffler_Updater.exe` | exe + `.sfu` | AES-256 + RDP1 |
+| v1.x/v2.x (legacy) | `LeShuffler_Legacy_Updater.exe` | exe only | Auto-RDP1 after update |
+
 ### Encrypted Devices (v3.0 bootloader)
 `.sfu` files are encrypted+signed - **safe to distribute openly**.
 
-**Distribution package:**
-```
-LeShuffler_Update/
-├── LeShuffler_Updater.exe     # Built from firmware_updater.py
-└── LeShuffler.sfu             # Encrypted firmware
-```
-
 ### Legacy Devices (v1.x/v2.x bootloader)
-`.bin` files are unprotected - use self-erasing updater.
+`.bin` embedded in exe, self-deletes after use. Firmware auto-sets RDP1 on first boot.
 
-**Distribution:** Single `LeShuffler_Legacy_Updater.exe` (embeds .bin, self-deletes)
+## Reverse Engineering Risk Summary
 
-**Auto-RDP1:** Application firmware now auto-sets RDP Level 1 on first boot:
-- `Core/Src/rdp_protection.c` - checks RDP level, sets RDP1 if needed
-- Runs once, idempotent (if RDP1 already set, does nothing)
-- After update, device is protected from debugger flash read
+| Attack Vector | Encrypted (v3.0) | Legacy (after update) | Legacy (before update) |
+|---------------|------------------|----------------------|------------------------|
+| Intercept .sfu file | ❌ AES-256 encrypted | N/A | N/A |
+| Copy .bin file | N/A | ❌ Embedded + deleted | ⚠️ If distributed |
+| Read flash via ST-LINK | ❌ RDP1 protected | ❌ RDP1 auto-set | ⚠️ RDP0 vulnerable |
+| Extract from exe memory | N/A | ⚠️ Possible but difficult | N/A |
+| Hardware attack (decap) | ⚠️ Expensive/difficult | ⚠️ Expensive/difficult | ⚠️ Expensive/difficult |
+
+**Bottom line:**
+- **Encrypted devices**: Fully protected (encryption + RDP1)
+- **Legacy devices after update**: Protected by RDP1 (firmware sets it automatically)
+- **Legacy devices before update**: Vulnerable until they receive the v1.0.2+ update
 
 ## Building Windows Executables
 

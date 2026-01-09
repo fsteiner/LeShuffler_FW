@@ -2324,10 +2324,29 @@ Added comprehensive build instructions for all updaters:
 | Legacy Updater | `python build_legacy_updater.py` | `LeShuffler_Legacy_Updater.exe` |
 | Remote Recovery | `python build_remote_flasher.py` | `LeShuffler_Remote_Recovery.exe` |
 
-**Distribution summary:**
-- Encrypted (.sfu): Distribute exe + .sfu file openly
-- Legacy (.bin): Distribute self-erasing exe only (embeds firmware, auto-sets RDP1)
-- Remote recovery: Never distribute (for remote support only)
+#### Firmware Distribution Summary:
+
+| Device Type | Updater | Distribute | Protection |
+|-------------|---------|------------|------------|
+| v3.0+ (encrypted) | `LeShuffler_Updater.exe` | exe + `.sfu` | AES-256 + RDP1 |
+| v1.x/v2.x (legacy) | `LeShuffler_Legacy_Updater.exe` | exe only | Auto-RDP1 after update |
+
+#### Reverse Engineering Risk Assessment:
+
+| Attack Vector | Encrypted (v3.0) | Legacy (after update) | Legacy (before update) |
+|---------------|------------------|----------------------|------------------------|
+| Intercept update file | ❌ AES-256 encrypted | N/A | N/A |
+| Copy .bin file | N/A | ❌ Embedded + deleted | ⚠️ Vulnerable |
+| Read flash via ST-LINK | ❌ RDP1 blocks | ❌ RDP1 auto-set | ⚠️ RDP0 vulnerable |
+| Extract from exe memory | N/A | ⚠️ Difficult | N/A |
+
+**Bottom line:**
+- Encrypted devices: Fully protected
+- Legacy after v1.0.2 update: Protected by auto-RDP1
+- Legacy before update: Vulnerable until updated
+
+#### Version Bump:
+- Firmware version bumped to **v1.0.2** for RDP protection changes
 
 #### Git Commits:
 - `6374da5` - Split CLAUDE.md into compact reference + SESSION_LOG.md
