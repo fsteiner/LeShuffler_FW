@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 """
-LeShuffler Firmware Updater v2.0 (Unified)
-Supports both encrypted (.sfu) and legacy (.bin) firmware files.
+LeShuffler Firmware Updater v3.0 (Encrypted Only)
+Updates firmware using encrypted .sfu files (requires bootloader v3.0+).
 
-File types:
-- .sfu: Encrypted firmware (requires bootloader v3.0+)
-        Created by encrypt_firmware.py with AES-256-CBC + ECDSA-P256
-- .bin: Plain firmware (works with any bootloader version)
-        Standard binary output from compiler
+File format:
+- .sfu: Encrypted firmware created by encrypt_firmware.py
+        Uses AES-256-CBC encryption + ECDSA-P256 signature
 
 Usage:
     python firmware_updater.py                    # Interactive mode (uses LeShuffler.sfu)
     python firmware_updater.py COM5              # Direct mode
     python firmware_updater.py --list            # List ports
-    python firmware_updater.py --file X.sfu      # Encrypted firmware
-    python firmware_updater.py --file X.bin      # Legacy firmware
+    python firmware_updater.py --file X.sfu      # Specific file
 """
 
 import sys
@@ -47,13 +44,8 @@ FIRMWARE_FILENAME = "LeShuffler.sfu"  # Default encrypted firmware file
 APPLICATION_ADDRESS = 0x08020000
 MAX_FIRMWARE_SIZE = 1024 * 1024  # 1MB max
 
-# Protocol constants - Legacy packets (v1.x, v2.x)
-PACKET_TYPE_START = 0x01       # Start transfer (contains total size)
-PACKET_TYPE_DATA = 0x02        # Data chunk
-PACKET_TYPE_END = 0x03         # End transfer
-PACKET_TYPE_STATUS = 0x04      # Query bootloader status
-
-# Protocol constants - Encrypted packets (v3.0+)
+# Protocol constants
+PACKET_TYPE_STATUS = 0x04      # Query bootloader status (version detection)
 PACKET_TYPE_ENC_START = 0x10   # Contains SFU header
 PACKET_TYPE_ENC_DATA = 0x11    # Contains encrypted data chunk
 PACKET_TYPE_ENC_END = 0x12     # Triggers signature verification
@@ -78,24 +70,14 @@ def get_executable_dir():
 
 
 def get_firmware_path(filename=None):
-    """Get firmware path, checking for .sfu first, then .bin if no file specified"""
+    """Get firmware path for .sfu file"""
     if filename:
         if os.path.isabs(filename):
             return filename
         return os.path.join(get_executable_dir(), filename)
 
-    # Default: look for .sfu first, then .bin
-    exe_dir = get_executable_dir()
-    sfu_path = os.path.join(exe_dir, "LeShuffler.sfu")
-    bin_path = os.path.join(exe_dir, "LeShuffler.bin")
-
-    if os.path.exists(sfu_path):
-        return sfu_path
-    elif os.path.exists(bin_path):
-        return bin_path
-    else:
-        # Return .sfu path for error message (preferred format)
-        return sfu_path
+    # Default: look for LeShuffler.sfu
+    return os.path.join(get_executable_dir(), "LeShuffler.sfu")
 
 
 def list_serial_ports():
@@ -637,108 +619,6 @@ class EncryptedFirmwareUpdater:
             # Verification will confirm if update succeeded
             return 'usb_disconnect_after_end'
 
-    # =========================================================================
-    # Legacy (non-encrypted) transfer methods for v1.x/v2.x bootloaders
-    # =========================================================================
-
-    def send_start_packet(self, total_size):
-        """Send START packet with total firmware size"""
-        packet = struct.pack('<III', PACKET_TYPE_START, APPLICATION_ADDRESS, total_size)
-        packet += struct.pack('<I', 0)  # CRC placeholder
-        packet += b'\xFF' * PACKET_DATA_SIZE
-
-        try:
-            self.ser.write(packet)
-            self.ser.flush()
-        except Exception as e:
-            return False
-
-        response = self.wait_for_response(timeout=15.0)  # Flash erase takes time
-        return response and response['success']
-
-    def send_data_packet(self, offset, data):
-        """Send DATA packet with firmware chunk"""
-        import binascii
-        crc = binascii.crc32(data) & 0xFFFFFFFF
-
-        packet = struct.pack('<III', PACKET_TYPE_DATA, APPLICATION_ADDRESS + offset, len(data))
-        packet += struct.pack('<I', crc)
-        # Pad data to PACKET_DATA_SIZE
-        padded_data = data + b'\xFF' * (PACKET_DATA_SIZE - len(data))
-        packet += padded_data
-
-        try:
-            self.ser.write(packet)
-            self.ser.flush()
-        except (serial.SerialException, OSError):
-            return False, True  # success=False, need_restart=True
-
-        response = self.wait_for_response(timeout=2.0)
-        if response is None:
-            return False, True  # Disconnected
-        return response['success'], False
-
-    def send_end_packet(self):
-        """Send END packet to finalize transfer"""
-        packet = struct.pack('<III', PACKET_TYPE_END, 0, 0)
-        packet += struct.pack('<I', 0)
-        packet += b'\xFF' * PACKET_DATA_SIZE
-
-        try:
-            self.ser.write(packet)
-            self.ser.flush()
-        except Exception as e:
-            return False
-
-        response = self.wait_for_response(timeout=5.0)
-        return response and response['success']
-
-    def do_legacy_transfer(self, firmware_data):
-        """Perform legacy (non-encrypted) firmware transfer"""
-        total_size = len(firmware_data)
-        total_packets = (total_size + PACKET_DATA_SIZE - 1) // PACKET_DATA_SIZE
-
-        print(f"  Sending START packet (erase flash)...")
-        if not self.send_start_packet(total_size):
-            print("  START packet failed")
-            return 'error'
-
-        print(f"  Flash erased, sending {total_packets} packets...")
-
-        for packet_num in range(total_packets):
-            offset = packet_num * PACKET_DATA_SIZE
-            chunk_size = min(PACKET_DATA_SIZE, total_size - offset)
-            chunk = firmware_data[offset:offset + chunk_size]
-
-            success, need_restart = self.send_data_packet(offset, chunk)
-
-            if need_restart:
-                return 'disconnect'
-
-            if not success:
-                print(f"\n  Failed at packet {packet_num}")
-                return 'error'
-
-            # Progress display
-            percent = ((packet_num + 1) * 100) // total_packets
-            bar_length = 40
-            filled = (percent * bar_length) // 100
-            bar = '=' * filled + '-' * (bar_length - filled)
-            bytes_sent = min((packet_num + 1) * PACKET_DATA_SIZE, total_size)
-            print(f"\r  [{bar}] {percent}% ({bytes_sent}/{total_size})", end='', flush=True)
-
-            time.sleep(PACKET_DELAY_MS / 1000.0)
-
-        print()
-
-        print("  Sending END packet...", end='', flush=True)
-        if self.send_end_packet():
-            print(" done")
-            return 'success'
-        else:
-            print(" failed")
-            return 'error'
-
     def do_encrypted_transfer(self, sfu_file):
         """Perform encrypted firmware transfer"""
         encrypted_data = sfu_file.encrypted_data
@@ -797,9 +677,9 @@ class EncryptedFirmwareUpdater:
             return 'signature_failed'
 
     def update_firmware(self, firmware_path):
-        """Main update function - handles both encrypted (.sfu) and legacy (.bin) files"""
+        """Main update function for encrypted .sfu files (requires v3.0+ bootloader)"""
         try:
-            # Detect bootloader version FIRST (before loading any file)
+            # Detect bootloader version FIRST
             if not self.detect_bootloader_version():
                 print("\n" + "=" * 60)
                 print("  CANNOT START UPDATE")
@@ -814,54 +694,31 @@ class EncryptedFirmwareUpdater:
                 print("=" * 60)
                 return 'not_bootloader'
 
-            # Detect file type from extension
-            file_ext = os.path.splitext(firmware_path)[1].lower()
-            is_encrypted = (file_ext == '.sfu')
+            # Require v3.0+ bootloader for encrypted updates
+            if not self.is_v3:
+                print("\n" + "=" * 60)
+                print("  CANNOT START UPDATE")
+                print("=" * 60)
+                print(f"  Bootloader v{self.bootloader_version} does not support encryption.")
+                print("  This updater requires bootloader v3.0 or newer.")
+                print("")
+                print("  For legacy bootloaders (v1.x/v2.x), use the")
+                print("  LeShuffler_Legacy_Updater instead.")
+                print("=" * 60)
+                return 'unsupported_bootloader'
 
-            # Auto-fallback to .bin for legacy bootloaders
-            if is_encrypted and not self.is_v3:
-                bin_path = os.path.splitext(firmware_path)[0] + '.bin'
-                if os.path.exists(bin_path):
-                    print(f"  Legacy bootloader - using .bin file")
-                    firmware_path = bin_path
-                    is_encrypted = False
-                else:
-                    print("\n" + "=" * 60)
-                    print("  CANNOT START UPDATE")
-                    print("=" * 60)
-                    print(f"  Bootloader v{self.bootloader_version} does not support encryption.")
-                    print("  Encrypted .sfu files require bootloader v3.0 or newer.")
-                    print("")
-                    print("  No .bin fallback found at:")
-                    print(f"    {bin_path}")
-                    print("")
-                    print("  Options:")
-                    print("    - Place LeShuffler.bin in the same folder")
-                    print("    - Update bootloader to v3.0+ (requires ST-LINK)")
-                    print("=" * 60)
-                    return 'unsupported_bootloader'
-
-            # Now load the selected file
-            if is_encrypted:
-                print(f"\n  Firmware: {os.path.basename(firmware_path)}")
-                sfu = SFUFile(firmware_path)
-                if not sfu.load():
-                    print("\n" + "=" * 60)
-                    print("  CANNOT START UPDATE")
-                    print("=" * 60)
-                    print(f"  {sfu.error}")
-                    print("=" * 60)
-                    return False
-                sfu.print_info()
-                firmware_size = sfu.header['original_size']
-                firmware_data = None
-            else:
-                print(f"\n  Firmware: {os.path.basename(firmware_path)}")
-                with open(firmware_path, 'rb') as f:
-                    firmware_data = f.read()
-                firmware_size = len(firmware_data)
-                print(f"  Size: {firmware_size} bytes")
-                sfu = None
+            # Load .sfu file
+            print(f"\n  Firmware: {os.path.basename(firmware_path)}")
+            sfu = SFUFile(firmware_path)
+            if not sfu.load():
+                print("\n" + "=" * 60)
+                print("  CANNOT START UPDATE")
+                print("=" * 60)
+                print(f"  {sfu.error}")
+                print("=" * 60)
+                return False
+            sfu.print_info()
+            firmware_size = sfu.header['original_size']
 
             if firmware_size > MAX_FIRMWARE_SIZE:
                 print("\n" + "=" * 60)
@@ -878,11 +735,7 @@ class EncryptedFirmwareUpdater:
                 print("\n  Update cancelled.")
                 return False
 
-            # Route to appropriate transfer method
-            if is_encrypted:
-                return self._do_encrypted_update(sfu)
-            else:
-                return self._do_legacy_update(firmware_data)
+            return self._do_encrypted_update(sfu)
 
         except FileNotFoundError:
             print("\n" + "=" * 60)
@@ -1028,50 +881,11 @@ class EncryptedFirmwareUpdater:
         print("=" * 60)
         return False
 
-    def _do_legacy_update(self, firmware_data):
-        """Handle legacy firmware update (v1.x/v2.x bootloaders)"""
-        restart_count = 0
-
-        while restart_count <= MAX_RESTART_ATTEMPTS:
-            if restart_count > 0:
-                print(f"\n  === RESTARTING (attempt {restart_count + 1}/{MAX_RESTART_ATTEMPTS + 1}) ===")
-
-            result = self.do_legacy_transfer(firmware_data)
-
-            if result == 'success':
-                print("\n" + "=" * 60)
-                print("  FIRMWARE UPDATE SUCCESSFUL")
-                print("=" * 60)
-                print("  Device is rebooting with new firmware.")
-                print("=" * 60)
-                return True
-
-            elif result == 'disconnect':
-                print(f"\n  USB disconnected during transfer")
-                if not self.wait_for_reconnect():
-                    return False
-                restart_count += 1
-
-            else:
-                print("\n" + "=" * 60)
-                print("  FIRMWARE UPDATE FAILED")
-                print("=" * 60)
-                print(f"  Transfer error: {result}")
-                print("=" * 60)
-                return False
-
-        print("\n" + "=" * 60)
-        print("  FIRMWARE UPDATE FAILED")
-        print("=" * 60)
-        print(f"  Too many restart attempts ({restart_count}).")
-        print("=" * 60)
-        return False
-
 
 def print_header():
     print()
     print("=" * 60)
-    print("    LESHUFFLER FIRMWARE UPDATER v2.0")
+    print("    LESHUFFLER FIRMWARE UPDATER v3.0")
     print("=" * 60)
 
 
@@ -1102,14 +916,12 @@ def main():
             print("  LeShuffler_Updater              Interactive mode")
             print("  LeShuffler_Updater <port>       Direct mode")
             print("  LeShuffler_Updater --list       List ports")
-            print("  LeShuffler_Updater --file X     Use specific file")
-            print("\nFile types:")
-            print("  .sfu  Encrypted firmware (requires v3.0+ bootloader)")
-            print("  .bin  Legacy firmware (works with any bootloader)")
+            print("  LeShuffler_Updater --file X.sfu Use specific file")
+            print("\nNote: Requires bootloader v3.0+ (encrypted updates only)")
+            print("      For legacy bootloaders, use LeShuffler_Legacy_Updater")
             print("\nExamples:")
             print("  LeShuffler_Updater COM5")
             print("  LeShuffler_Updater --file firmware.sfu COM5")
-            print("  LeShuffler_Updater --file firmware.bin COM5")
             input("\n  Press Enter to exit...")
             sys.exit(0)
 
@@ -1147,7 +959,7 @@ def main():
         input("\n  Press Enter to exit...")
         sys.exit(0)
 
-    # Get firmware path (don't print yet - will select .sfu or .bin after detecting bootloader)
+    # Get firmware path
     firmware_path = get_firmware_path(firmware_file)
 
     if not os.path.exists(firmware_path):
@@ -1156,9 +968,7 @@ def main():
         print("=" * 60)
         print(f"  Firmware file not found: {firmware_path}")
         print("")
-        print("  Place one of these files in the same folder as this updater:")
-        print("    - LeShuffler.sfu  (encrypted, for v3.0+ bootloader)")
-        print("    - LeShuffler.bin  (legacy, for any bootloader)")
+        print("  Place LeShuffler.sfu in the same folder as this updater.")
         print("=" * 60)
         input("\n  Press Enter to exit...")
         sys.exit(1)
