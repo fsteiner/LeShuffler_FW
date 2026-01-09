@@ -2302,7 +2302,7 @@ python build_legacy_updater.py
 - `cc64065` - Update README: production keys in 1Password only
 - `1c3692e` - Add standalone ST-LINK flasher for Windows end-users
 - `14710dc` - Add remote recovery flasher and update documentation
-- `[pending]` - Add legacy USB updater (self-erasing)
+- `04ae403` - Add self-erasing legacy USB updater
 
 ---
 
