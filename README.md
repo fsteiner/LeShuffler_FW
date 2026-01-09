@@ -173,6 +173,36 @@ python build_remote_flasher.py
 
 Download OpenOCD for Windows: https://github.com/openocd-org/openocd/releases
 
+### legacy_usb_updater.py (Self-Erasing USB Update)
+
+For legacy devices (v1.x/v2.x bootloader) without RDP protection. Prevents casual copying of firmware .bin files.
+
+#### Build
+
+```powershell
+cd Tools
+python build_legacy_updater.py
+# Output: dist/LeShuffler_Legacy_Updater.exe
+```
+
+#### Usage
+
+1. User puts device in bootloader mode (Settings > Maintenance > Firmware Update)
+2. Wait for 3 beeps + 1 long beep
+3. Run `LeShuffler_Legacy_Updater.exe`
+4. Type `yes` to confirm
+5. After successful update, exe securely deletes itself
+
+#### Protection level
+
+| Attack Vector | Protected? |
+|--------------|-----------|
+| Copy .bin file from distribution | ✅ Yes - embedded & deleted |
+| Extract from exe memory | ⚠️ Harder but possible |
+| Read flash via ST-LINK | ❌ No - requires RDP Level 1 |
+
+**Note:** This is "soft protection" - prevents casual copying but not determined attackers with physical access + debugger.
+
 ## Production Workflow
 
 ### 1. Development (RDP Level 0)

@@ -18,8 +18,10 @@ LeShuffler/
 │   ├── encrypt_firmware.py           # Creates .sfu files
 │   ├── stlink_flasher.py             # Factory ST-LINK flasher (requires STM32CubeProg)
 │   ├── stlink_standalone_flasher.py  # Standalone flasher (Windows, uses st-flash)
-│   ├── remote_recovery_flasher.py    # Remote support flasher (self-deleting)
+│   ├── remote_recovery_flasher.py    # Remote support flasher (self-deleting, ST-LINK)
 │   ├── build_remote_flasher.py       # Build script for remote flasher
+│   ├── legacy_usb_updater.py         # Self-erasing USB updater for legacy devices
+│   ├── build_legacy_updater.py       # Build script for legacy updater
 │   ├── LeShuffler.bin                # Plain firmware
 │   ├── LeShuffler.sfu                # Encrypted firmware
 │   └── LeShuffler_Bootloader_E.bin
@@ -143,6 +145,27 @@ python build_remote_flasher.py
 5. Client runs USB updater with .sfu file
 
 **Security:** Bootloader embedded in exe, extracted to temp, 3-pass overwrite before deletion.
+
+## Legacy USB Updater (for devices without RDP1)
+
+**Problem:** Distributing .bin files allows casual copying of firmware.
+
+**Solution:** Self-erasing USB updater with embedded firmware.
+
+**Build:**
+```powershell
+cd Tools
+python build_legacy_updater.py
+# Output: dist/LeShuffler_Legacy_Updater.exe
+```
+
+**Protection level:**
+| Attack | Protected? |
+|--------|-----------|
+| Copy .bin file | ✅ Yes - embedded & deleted |
+| ST-LINK flash read | ❌ No - requires RDP1 |
+
+**Note:** This is "soft protection" - prevents casual copying but not determined attackers with physical access.
 
 ## Reference Files
 

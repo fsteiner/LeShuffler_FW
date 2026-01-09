@@ -2272,11 +2272,37 @@ python build_remote_flasher.py
 #### Orphan Bootloader/ Folder:
 Deleted orphan `Bootloader/.project` file left behind after moving to `Legacy/Bootloader/`.
 
+#### Legacy USB Updater (Self-Erasing):
+
+**Problem:** User noted ST-LINK recovery isn't practical for end users in the field. Wanted USB-based solution that protects firmware from casual copying.
+
+**Solution:** Self-erasing USB updater for legacy bootloaders (v1.x/v2.x).
+
+**Files created:**
+- `Tools/legacy_usb_updater.py` - USB updater with embedded firmware, self-deletes after use
+- `Tools/build_legacy_updater.py` - Build script to embed .bin and create exe
+
+**Protection level:**
+| Attack | Protected? |
+|--------|-----------|
+| Copy .bin file | ✅ Yes - embedded & deleted |
+| ST-LINK flash read | ❌ No - requires RDP1 |
+
+**Note:** This is "soft protection" - prevents casual copying but not determined attackers with physical access + debugger. True protection requires RDP Level 1.
+
+**Build:**
+```powershell
+cd Tools
+python build_legacy_updater.py
+# Output: dist/LeShuffler_Legacy_Updater.exe
+```
+
 #### Git Commits:
 - `6374da5` - Split CLAUDE.md into compact reference + SESSION_LOG.md
 - `cc64065` - Update README: production keys in 1Password only
 - `1c3692e` - Add standalone ST-LINK flasher for Windows end-users
 - `14710dc` - Add remote recovery flasher and update documentation
+- `[pending]` - Add legacy USB updater (self-erasing)
 
 ---
 
