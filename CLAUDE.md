@@ -14,7 +14,7 @@ LeShuffler/
 ├── Core/                  # Application firmware
 ├── Bootloader_E/          # Encrypted bootloader (v3.0) - ACTIVE
 ├── Tools/
-│   ├── firmware_updater.py           # USB updater (encrypted + legacy)
+│   ├── firmware_updater.py           # USB updater (encrypted only, v3.0+ bootloader)
 │   ├── encrypt_firmware.py           # Creates .sfu files
 │   ├── stlink_flasher.py             # Factory ST-LINK flasher (requires STM32CubeProg)
 │   ├── stlink_standalone_flasher.py  # Standalone flasher (Windows, uses st-flash)
@@ -214,4 +214,4 @@ When updating documentation, update all three "reference files":
 
 ## Session History
 
-See `SESSION_LOG.md` for full development history (22 sessions).
+See `SESSION_LOG.md` for full development history (23 sessions).

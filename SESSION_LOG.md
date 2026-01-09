@@ -2358,6 +2358,31 @@ Added comprehensive build instructions for all updaters:
 
 ---
 
+### 2025-01-09: Session 23 - Simplify Encrypted Firmware Updater
+
+#### Changes:
+Removed legacy bootloader support from `firmware_updater.py`:
+- Now only supports encrypted .sfu files (requires v3.0+ bootloader)
+- Removed legacy packet constants (PACKET_TYPE_START, DATA, END)
+- Removed .bin file fallback logic
+- Removed legacy transfer methods (send_start_packet, send_data_packet, send_end_packet, do_legacy_transfer)
+- Removed _do_legacy_update() method
+- Updated version to v3.0
+- Updated help text to reference Legacy Updater for old bootloaders
+
+**Rationale:** Since there's a separate `LeShuffler_Legacy_Updater.exe` for v1.x/v2.x bootloaders, the main updater doesn't need .bin fallback. This simplifies the code and avoids confusion.
+
+#### Distribution Strategy (unchanged):
+| Device Type | Updater | Distribute |
+|-------------|---------|------------|
+| v3.0+ bootloader | `firmware_updater.py` (v3.0) | exe + `.sfu` |
+| v1.x/v2.x bootloader | `legacy_usb_updater.py` | exe only (self-erasing) |
+
+#### Git Commits:
+- `827e664` - Simplify firmware_updater.py: remove legacy bootloader support
+
+---
+
 ### STM32H7 HAL Notes
 
 #### HASH Peripheral (STM32H7)
