@@ -45,6 +45,7 @@
 #include <utilities.h>
 #include <version.h>
 #include "iwdg.h"
+#include "rdp_protection.h"
 
 #include "tests.h"
 
@@ -148,6 +149,12 @@ int main(void)
 	SystemClock_Config();
 
 	/* USER CODE BEGIN SysInit */
+
+	/* Check and set RDP Level 1 protection if not already set.
+	 * This runs once on first boot after firmware update.
+	 * If RDP0, sets RDP1 and triggers reset (function won't return).
+	 * If already RDP1, continues normal boot. */
+	RDP_CheckAndProtect();
 	/*
 	 * RECAP OF TIMER USE
 	 * TIM2		rotary encoder

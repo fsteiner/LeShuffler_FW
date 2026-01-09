@@ -61,7 +61,7 @@ The device supports two update methods:
 
 1. On device: Settings → Maintenance → Firmware Update
 2. Wait for 3 short beeps + 1 long beep (bootloader ready)
-3. On PC: Run `python Tools/firmware_updater_encrypted.py`
+3. On PC: Run `python Tools/firmware_updater.py`
 4. Select COM port and wait for transfer to complete
 
 The updater auto-detects bootloader version and selects the appropriate file:
@@ -70,14 +70,14 @@ The updater auto-detects bootloader version and selects the appropriate file:
 
 ## Tools
 
-### firmware_updater_encrypted.py
+### firmware_updater.py
 
 USB firmware updater supporting both encrypted and legacy transfers.
 
 ```bash
-python firmware_updater_encrypted.py              # Interactive
-python firmware_updater_encrypted.py COM5         # Direct
-python firmware_updater_encrypted.py --list       # List ports
+python firmware_updater.py              # Interactive
+python firmware_updater.py COM5         # Direct
+python firmware_updater.py --list       # List ports
 ```
 
 **Required files** (in Tools folder):
@@ -193,15 +193,23 @@ python build_legacy_updater.py
 4. Type `yes` to confirm
 5. After successful update, exe securely deletes itself
 
-#### Protection level
+#### Auto-RDP1 Protection
+
+The application firmware now auto-sets RDP Level 1 on first boot after update:
+- Checks current RDP level at startup
+- If RDP0 → sets RDP1 and triggers reset
+- If already RDP1 → continues normal boot
+- Runs once, idempotent
+
+This means legacy devices get full RDP1 protection after their first firmware update with the new firmware.
+
+#### Protection level (after update)
 
 | Attack Vector | Protected? |
 |--------------|-----------|
 | Copy .bin file from distribution | ✅ Yes - embedded & deleted |
 | Extract from exe memory | ⚠️ Harder but possible |
-| Read flash via ST-LINK | ❌ No - requires RDP Level 1 |
-
-**Note:** This is "soft protection" - prevents casual copying but not determined attackers with physical access + debugger.
+| Read flash via ST-LINK | ✅ Yes - RDP1 auto-set after update |
 
 ## Production Workflow
 
@@ -240,6 +248,53 @@ This:
 - Flashes bootloader with production keys
 - Flashes application firmware
 - Enables read protection (flash cannot be read, but can be erased and reflashed)
+
+## Building Windows Executables
+
+For distributing update tools to end users without Python.
+
+**Prerequisites:**
+```powershell
+pip install pyinstaller pyserial
+```
+
+### Encrypted Updater (for v3.0 bootloader devices)
+
+```powershell
+cd Tools
+python -m PyInstaller --onefile --name "LeShuffler_Updater" --collect-all serial --clean firmware_updater.py
+```
+
+**Output:** `dist/LeShuffler_Updater.exe`
+
+**Distribution package:**
+```
+LeShuffler_Update/
+├── LeShuffler_Updater.exe
+└── LeShuffler.sfu
+```
+
+### Legacy Updater (for v1.x/v2.x bootloader devices)
+
+```powershell
+cd Tools
+python build_legacy_updater.py
+```
+
+**Output:** `dist/LeShuffler_Legacy_Updater.exe`
+
+**Distribution:** Single exe only (firmware embedded, self-deleting, auto-sets RDP1)
+
+### Remote Recovery Flasher (for ST-LINK recovery)
+
+```powershell
+cd Tools
+python build_remote_flasher.py
+```
+
+**Output:** `dist/LeShuffler_Remote_Recovery.exe`
+
+**Do not distribute** - for remote support sessions only.
 
 ## Versioning
 

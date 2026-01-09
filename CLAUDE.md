@@ -146,26 +146,58 @@ python build_remote_flasher.py
 
 **Security:** Bootloader embedded in exe, extracted to temp, 3-pass overwrite before deletion.
 
-## Legacy USB Updater (for devices without RDP1)
+## Firmware Distribution
 
-**Problem:** Distributing .bin files allows casual copying of firmware.
+### Encrypted Devices (v3.0 bootloader)
+`.sfu` files are encrypted+signed - **safe to distribute openly**.
 
-**Solution:** Self-erasing USB updater with embedded firmware.
+**Distribution package:**
+```
+LeShuffler_Update/
+├── LeShuffler_Updater.exe     # Built from firmware_updater.py
+└── LeShuffler.sfu             # Encrypted firmware
+```
 
-**Build:**
+### Legacy Devices (v1.x/v2.x bootloader)
+`.bin` files are unprotected - use self-erasing updater.
+
+**Distribution:** Single `LeShuffler_Legacy_Updater.exe` (embeds .bin, self-deletes)
+
+**Auto-RDP1:** Application firmware now auto-sets RDP Level 1 on first boot:
+- `Core/Src/rdp_protection.c` - checks RDP level, sets RDP1 if needed
+- Runs once, idempotent (if RDP1 already set, does nothing)
+- After update, device is protected from debugger flash read
+
+## Building Windows Executables
+
+**Prerequisites:**
+```powershell
+pip install pyinstaller pyserial
+```
+
+### Encrypted Updater (for v3.0 bootloader)
+```powershell
+cd Tools
+python -m PyInstaller --onefile --name "LeShuffler_Updater" --collect-all serial --clean firmware_updater.py
+# Output: dist/LeShuffler_Updater.exe
+```
+Distribute with `LeShuffler.sfu` file.
+
+### Legacy Updater (for v1.x/v2.x bootloader, self-erasing)
 ```powershell
 cd Tools
 python build_legacy_updater.py
 # Output: dist/LeShuffler_Legacy_Updater.exe
 ```
+Distribute exe only (firmware embedded, auto-sets RDP1 after update).
 
-**Protection level:**
-| Attack | Protected? |
-|--------|-----------|
-| Copy .bin file | ✅ Yes - embedded & deleted |
-| ST-LINK flash read | ❌ No - requires RDP1 |
-
-**Note:** This is "soft protection" - prevents casual copying but not determined attackers with physical access.
+### Remote Recovery Flasher (ST-LINK, self-erasing)
+```powershell
+cd Tools
+python build_remote_flasher.py
+# Output: dist/LeShuffler_Remote_Recovery.exe
+```
+**Do not distribute** - for remote support sessions only.
 
 ## Reference Files
 

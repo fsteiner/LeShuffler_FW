@@ -2297,12 +2297,45 @@ python build_legacy_updater.py
 # Output: dist/LeShuffler_Legacy_Updater.exe
 ```
 
+#### Auto-RDP1 Protection for Legacy Devices:
+
+Added automatic RDP Level 1 setting to application firmware for legacy devices:
+
+**Files created:**
+- `Core/Inc/rdp_protection.h` - Header with API
+- `Core/Src/rdp_protection.c` - Implementation
+
+**How it works:**
+- `RDP_CheckAndProtect()` called early in `main()` after `SystemClock_Config()`
+- Reads current RDP level from option bytes
+- If RDP0 → programs RDP1 → triggers system reset
+- If already RDP1 → does nothing, continues normal boot
+- Runs once per power cycle, idempotent
+
+**Result:** Legacy devices get full RDP1 protection after firmware update via self-erasing updater.
+
+#### Windows Executable Build Instructions:
+
+Added comprehensive build instructions for all updaters:
+
+| Tool | Build Command | Output |
+|------|---------------|--------|
+| Encrypted Updater | `PyInstaller --onefile firmware_updater.py` | `LeShuffler_Updater.exe` |
+| Legacy Updater | `python build_legacy_updater.py` | `LeShuffler_Legacy_Updater.exe` |
+| Remote Recovery | `python build_remote_flasher.py` | `LeShuffler_Remote_Recovery.exe` |
+
+**Distribution summary:**
+- Encrypted (.sfu): Distribute exe + .sfu file openly
+- Legacy (.bin): Distribute self-erasing exe only (embeds firmware, auto-sets RDP1)
+- Remote recovery: Never distribute (for remote support only)
+
 #### Git Commits:
 - `6374da5` - Split CLAUDE.md into compact reference + SESSION_LOG.md
 - `cc64065` - Update README: production keys in 1Password only
 - `1c3692e` - Add standalone ST-LINK flasher for Windows end-users
 - `14710dc` - Add remote recovery flasher and update documentation
 - `04ae403` - Add self-erasing legacy USB updater
+- `[pending]` - Add auto-RDP1 protection and exe build instructions
 
 ---
 
