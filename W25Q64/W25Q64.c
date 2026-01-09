@@ -1,6 +1,7 @@
 #include <main.h>
 #include <W25Q64.h>
 #include <octospi.h>
+#include <iwdg.h>
 
 /* OCTO SPI Initial Function */
 HAL_StatusTypeDef W25Q64_OCTO_SPI_Init(OSPI_HandleTypeDef* hospi)
@@ -309,6 +310,7 @@ HAL_StatusTypeDef W25Q64_OSPI_Erase_Chip(OSPI_HandleTypeDef* hospi)
     while (W25Q64_IsBusy(hospi)==HAL_ERROR)
     {
     	HAL_Delay(1);
+    	watchdog_refresh();  /* Full chip erase takes 20-100 seconds */
     }
 
     if (W25Q64_OSPI_AutoPollingMemReady(hospi) != HAL_OK) {
@@ -367,6 +369,9 @@ HAL_StatusTypeDef W25Q64_OSPI_EraseSector(OSPI_HandleTypeDef* hospi, uint32_t Er
         }
 
         StartAddress += W25Q_SECTOR_SIZE;
+
+        /* Refresh watchdog - sector erase can take 45-400ms each */
+        watchdog_refresh();
     }
 
     return HAL_OK;
