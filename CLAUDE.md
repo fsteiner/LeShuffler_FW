@@ -3,7 +3,7 @@
 ## Project Overview
 
 LeShuffler: Automatic card shuffler firmware for STM32H733VGT6.
-- **Current version**: v1.0.1 (tagged)
+- **Current version**: v1.0.2
 - **Bootloader**: v3.0 (encrypted, AES-256-CBC + ECDSA-P256)
 - **Status**: Production ready, RDP Level 1 verified
 
