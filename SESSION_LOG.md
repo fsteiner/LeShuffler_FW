@@ -2335,7 +2335,7 @@ Added comprehensive build instructions for all updaters:
 - `1c3692e` - Add standalone ST-LINK flasher for Windows end-users
 - `14710dc` - Add remote recovery flasher and update documentation
 - `04ae403` - Add self-erasing legacy USB updater
-- `[pending]` - Add auto-RDP1 protection and exe build instructions
+- `907d18b` - Add auto-RDP1 protection and exe build instructions
 
 ---
 
