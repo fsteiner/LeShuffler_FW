@@ -1,6 +1,7 @@
 #include <buttons.h>
 #include <definitions.h>
 #include <interface.h>
+#include <iwdg.h>
 #include <octospi.h>
 #include <PSRAM.h>
 #include <stdio.h>
@@ -318,6 +319,8 @@ void image_utility(void)
 	beep(MEDIUM_BEEP);
 	while (1)
 	{
+		watchdog_refresh();
+
 		if (packetReceived)
 		{
 			if (!hospi_reset)

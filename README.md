@@ -81,6 +81,18 @@ This is **inherent to v1.0 bootloader** - cannot be fixed by firmware update alo
 - v3.0+ bootloader: Use `firmware_updater.py` with `.sfu` file
 - v1.x/v2.x bootloader: Use `legacy_usb_updater.py` (self-erasing exe)
 
+### Service Mode Shortcut (v1.0.2+)
+
+For field updates when USB power is insufficient for motor initialization:
+
+1. Hold **both ENTER and ESC buttons** while powering on the device
+2. Keep holding for **2 seconds**
+3. Screen shows "SERVICE MODE" and 2 short beeps confirm
+4. Device enters bootloader mode directly (bypasses motor init)
+5. Run firmware updater as normal
+
+This allows firmware updates on low-power USB ports (laptops) that can't power the stepper motor driver.
+
 ## Tools
 
 ### firmware_updater.py
