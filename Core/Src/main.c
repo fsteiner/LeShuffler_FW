@@ -105,6 +105,7 @@ extern user_prefs_t void_user_pref;
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void EnterBootloaderMode(void);
+static bool CheckServiceModeShortcut(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -171,6 +172,10 @@ int main(void)
 	MX_USART3_UART_Init();
 	MX_IWDG1_Init();
 	/* USER CODE BEGIN 2 */
+
+	// Check for service mode shortcut (both buttons held for 2 seconds)
+	// This allows firmware updates when USB power is insufficient for motors
+	CheckServiceModeShortcut();
 
 	/**
 	 * @brief Call this in main() as soon as possible AFTER MX_I2C3_Init()
@@ -951,4 +956,87 @@ void EnterBootloaderMode(void)
 	}
 	RTC->BKP0R = BOOTLOADER_MAGIC_VALUE;
 	NVIC_SystemReset();
+}
+
+/**
+ * @brief Check for service mode shortcut at boot
+ * If both ENTER and ESC buttons are held for 2 seconds at boot,
+ * enters bootloader mode directly (bypasses motor init).
+ * Used for field updates when USB power is insufficient for motors.
+ * @return true if shortcut activated (won't return - resets to bootloader)
+ * @return false if shortcut not activated (continue normal boot)
+ */
+static bool CheckServiceModeShortcut(void)
+{
+	// Check if both buttons are currently pressed
+	// Buttons are active HIGH (open_state = GPIO_PIN_RESET)
+	GPIO_PinState esc_state = HAL_GPIO_ReadPin(ESC_BTN_GPIO_Port, ESC_BTN_Pin);
+	GPIO_PinState ent_state = HAL_GPIO_ReadPin(ENT_BTN_GPIO_Port, ENT_BTN_Pin);
+
+	if (esc_state != GPIO_PIN_SET || ent_state != GPIO_PIN_SET)
+	{
+		// One or both buttons not pressed - normal boot
+		return false;
+	}
+
+	// Both buttons pressed - wait 2 seconds and verify still held
+	// Use simple HAL_Delay with watchdog refresh
+	const uint32_t SERVICE_MODE_HOLD_TIME_MS = 2000;
+	const uint32_t CHECK_INTERVAL_MS = 50;
+	uint32_t elapsed_ms = 0;
+
+	while (elapsed_ms < SERVICE_MODE_HOLD_TIME_MS)
+	{
+		watchdog_refresh();
+		HAL_Delay(CHECK_INTERVAL_MS);
+		elapsed_ms += CHECK_INTERVAL_MS;
+
+		// Re-check buttons
+		esc_state = HAL_GPIO_ReadPin(ESC_BTN_GPIO_Port, ESC_BTN_Pin);
+		ent_state = HAL_GPIO_ReadPin(ENT_BTN_GPIO_Port, ENT_BTN_Pin);
+
+		if (esc_state != GPIO_PIN_SET || ent_state != GPIO_PIN_SET)
+		{
+			// Button released before 2 seconds - abort shortcut
+			return false;
+		}
+	}
+
+	// Both buttons held for 2 seconds - enter service mode
+	// Initialize minimal LCD to show message
+	HAL_GPIO_WritePin(BACKLIT_PWM_GPIO_Port, BACKLIT_PWM_Pin, GPIO_PIN_SET);
+	BSP_LCD_Init();
+	BSP_LCD_Clear(LCD_COLOR_BLACK);
+	BSP_LCD_SetFont(&LCD_FIXED_FONT);
+	BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+	BSP_LCD_DisplayStringAtLine(10, (uint8_t*)" SERVICE MODE");
+	BSP_LCD_SetFont(&LCD_FIXED_SMALL_FONT);
+	// Display current version (reads from flash, no EERAM needed)
+	static char version_msg[40];
+	snprintf(version_msg, sizeof(version_msg), " Current: %s", GetFirmwareVersionString());
+	BSP_LCD_DisplayStringAtLine(8, (uint8_t*)version_msg);
+	BSP_LCD_DisplayStringAtLine(6, (uint8_t*)" Entering firmware update...");
+
+	// Distinctive beep pattern (long-short-long) to confirm service mode
+	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+	HAL_Delay(300);
+	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+	HAL_Delay(100);
+	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+	HAL_Delay(100);
+	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+	HAL_Delay(100);
+	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+	HAL_Delay(300);
+	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+
+	// Delay so user can read the screen
+	HAL_Delay(2500);
+	watchdog_refresh();
+
+	// Enter bootloader mode (this resets the device)
+	EnterBootloaderMode();
+
+	// Never reached
+	return true;
 }

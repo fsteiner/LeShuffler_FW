@@ -68,6 +68,18 @@ The updater auto-detects bootloader version and selects the appropriate file:
 - v3.0+ bootloader: Uses `.sfu` (encrypted)
 - v1.x/v2.x bootloader: Falls back to `.bin` (legacy)
 
+### Service Mode Shortcut (v1.0.2+)
+
+For field updates when USB power is insufficient for motor initialization:
+
+1. Hold **both ENTER and ESC buttons** while powering on the device
+2. Keep holding for **2 seconds**
+3. Screen shows "SERVICE MODE" and 2 short beeps confirm
+4. Device enters bootloader mode directly (bypasses motor init)
+5. Run firmware updater as normal
+
+This allows firmware updates on low-power USB ports (laptops) that can't power the stepper motor driver.
+
 ## Tools
 
 ### firmware_updater_encrypted.py
