@@ -11,11 +11,17 @@ Memory Map:
 
 Usage:
   1. Connect ST-LINK to device
-  2. Place LeShuffler_Bootloader_E.bin and LeShuffler.bin in same folder as this script
+  2. Ensure files are in place:
+     - Bootloader: ~/.leshuffler_keys/LeShuffler_Bootloader_E.bin (secure, not in Dropbox)
+     - Firmware: LeShuffler.bin in same folder as this script
   3. Run: python stlink_flasher.py
 
   Or with custom paths:
     python stlink_flasher.py --bootloader path/to/bootloader.bin --firmware path/to/firmware.bin
+
+Note: The bootloader binary contains the AES encryption key and should NOT be stored
+      in cloud-synced folders. Default location: ~/.leshuffler_keys/ (Mac/Linux) or
+      %USERPROFILE%\\.leshuffler_keys\\ (Windows)
 """
 
 import subprocess
@@ -23,6 +29,13 @@ import sys
 import os
 import argparse
 from pathlib import Path
+
+def get_secure_keys_dir():
+    """Get the secure keys directory (outside Dropbox/cloud sync)"""
+    if sys.platform == 'win32':
+        return Path(os.environ.get('USERPROFILE', '')) / '.leshuffler_keys'
+    else:
+        return Path.home() / '.leshuffler_keys'
 
 def get_app_dir():
     """Get the application directory (works for both script and PyInstaller exe)"""
@@ -185,7 +198,10 @@ Examples:
         bootloader_path = Path(args.bootloader) if args.bootloader else None
         if not bootloader_path:
             # Look for bootloader in common locations
+            # Priority: secure keys folder first (contains production bootloader with real keys)
+            secure_dir = get_secure_keys_dir()
             candidates = [
+                secure_dir / "LeShuffler_Bootloader_E.bin",  # Secure location (not in Dropbox)
                 script_dir / "LeShuffler_Bootloader_E.bin",
                 script_dir / "Bootloader_E.bin",
                 script_dir / "bootloader.bin",
