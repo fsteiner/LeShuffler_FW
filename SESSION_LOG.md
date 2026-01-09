@@ -2378,6 +2378,21 @@ Removed legacy bootloader support from `firmware_updater.py`:
 | v3.0+ bootloader | `firmware_updater.py` (v3.0) | exe + `.sfu` |
 | v1.x/v2.x bootloader | `legacy_usb_updater.py` | exe only (self-erasing) |
 
+#### Bootloader v1.0 Limitation Clarified:
+
+v1.0 erases flash immediately when user enters update mode (before USB connects).
+This is **inherent to v1.0 bootloader** - cannot be fixed by firmware update.
+
+| Scenario | What Happens | Bricked? |
+|----------|--------------|----------|
+| User enters update mode, then cancels | Flash erased but empty (0xFF) → bootloader detects invalid app, stays in bootloader mode | **No** - can retry |
+| USB cable issue, no connection | Same - empty flash detected as invalid | **No** - can retry |
+| USB disconnect mid-transfer | Partial firmware written with valid-looking header → bootloader jumps to corrupt code | **Yes** - ST-LINK required |
+
+**Key insight:** Device only truly bricks if partial firmware is written that looks valid enough to jump to. Empty flash (0xFF) is detected as invalid, so bootloader stays in bootloader mode.
+
+**v3.0 fix:** Flash not erased until START packet received (connection confirmed).
+
 #### Git Commits:
 - `827e664` - Simplify firmware_updater.py: remove legacy bootloader support
 

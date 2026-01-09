@@ -57,6 +57,19 @@ The device supports two update methods:
 | v2.x | No | .bin only | Added resume on disconnect |
 | v3.0+ | Yes | .sfu or .bin | AES-256-CBC + ECDSA-P256 |
 
+### Bootloader v1.0 Limitation (devices in field)
+
+v1.0 erases flash immediately when user enters update mode (before USB connects).
+This is **inherent to v1.0 bootloader** - cannot be fixed by firmware update alone.
+
+| Scenario | What Happens | Bricked? |
+|----------|--------------|----------|
+| User enters update mode, then cancels | Flash erased but empty (0xFF) → bootloader detects invalid app, stays in bootloader mode | **No** - can retry |
+| USB cable issue, no connection | Same - empty flash detected as invalid | **No** - can retry |
+| USB disconnect mid-transfer | Partial firmware written with valid-looking header → bootloader jumps to corrupt code | **Yes** - ST-LINK required |
+
+**v3.0 bootloader fix:** Flash not erased until START packet received (connection confirmed). User can power cycle and old firmware still works.
+
 ### USB Update Process
 
 1. On device: Settings → Maintenance → Firmware Update
@@ -64,15 +77,15 @@ The device supports two update methods:
 3. On PC: Run `python Tools/firmware_updater.py`
 4. Select COM port and wait for transfer to complete
 
-The updater auto-detects bootloader version and selects the appropriate file:
-- v3.0+ bootloader: Uses `.sfu` (encrypted)
-- v1.x/v2.x bootloader: Falls back to `.bin` (legacy)
+**Updaters by bootloader version:**
+- v3.0+ bootloader: Use `firmware_updater.py` with `.sfu` file
+- v1.x/v2.x bootloader: Use `legacy_usb_updater.py` (self-erasing exe)
 
 ## Tools
 
 ### firmware_updater.py
 
-USB firmware updater supporting both encrypted and legacy transfers.
+USB firmware updater for encrypted .sfu files (requires v3.0+ bootloader).
 
 ```bash
 python firmware_updater.py              # Interactive
@@ -81,8 +94,9 @@ python firmware_updater.py --list       # List ports
 ```
 
 **Required files** (in Tools folder):
-- `LeShuffler.sfu` - Encrypted firmware (for v3.0+ bootloaders)
-- `LeShuffler.bin` - Plain firmware (fallback for legacy bootloaders)
+- `LeShuffler.sfu` - Encrypted firmware
+
+For legacy bootloaders (v1.x/v2.x), use `legacy_usb_updater.py` instead.
 
 ### encrypt_firmware.py
 
@@ -364,7 +378,7 @@ Production devices use **RDP Level 1**.
 
 ## Development History
 
-See `SESSION_LOG.md` for the full development history of the encrypted bootloader system (21 sessions covering bootloader versions, crypto implementation, debugging, and production setup).
+See `SESSION_LOG.md` for the full development history of the encrypted bootloader system (23 sessions covering bootloader versions, crypto implementation, debugging, and production setup).
 
 ## License
 

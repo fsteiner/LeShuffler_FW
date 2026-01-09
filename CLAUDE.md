@@ -159,6 +159,19 @@ python build_remote_flasher.py
 ### Legacy Devices (v1.x/v2.x bootloader)
 `.bin` embedded in exe, self-deletes after use. Firmware auto-sets RDP1 on first boot.
 
+### Bootloader v1.0 Limitation (devices in field)
+
+v1.0 erases flash immediately when user enters update mode (before USB connects).
+This is **inherent to v1.0 bootloader** - cannot be fixed by firmware update.
+
+| Scenario | What Happens | Bricked? |
+|----------|--------------|----------|
+| User enters update mode, then cancels | Flash erased but empty (0xFF) → bootloader detects invalid app, stays in bootloader mode | **No** - can retry |
+| USB cable issue, no connection | Same - empty flash detected as invalid | **No** - can retry |
+| USB disconnect mid-transfer | Partial firmware written with valid-looking header → bootloader jumps to corrupt code | **Yes** - ST-LINK required |
+
+**v3.0 bootloader fix:** Flash not erased until START packet received (connection confirmed). User can power cycle and old firmware still works.
+
 ## Reverse Engineering Risk Summary
 
 | Attack Vector | Encrypted (v3.0) | Legacy (after update) | Legacy (before update) |
