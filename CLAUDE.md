@@ -95,6 +95,23 @@ python stlink_flasher.py --rdp 1 -y  # Flash + set RDP Level 1
 # Then power cycle the device
 ```
 
+### Factory Image Loader (image_loader.py)
+
+Location: `Manufacturing/APIC/Test_and_production_firmware/image_loader.py`
+
+Uploads C header image files to device external flash. CLI version (no GUI).
+
+```bash
+python image_loader.py              # Upload all .h files from C_headers/
+python image_loader.py --erase      # Erase external flash only
+python image_loader.py --list       # List available ports
+python image_loader.py COM5         # Use specific port
+```
+
+- Auto-selects port when one LeShuffler device found
+- Looks for `C_headers/` folder in same directory
+- Build exe: `pyinstaller --onefile --name "LeShuffler_Image_Loader" image_loader.py`
+
 ### STM32_Programmer_CLI
 
 **Mac:**
