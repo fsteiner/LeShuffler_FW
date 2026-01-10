@@ -16,7 +16,7 @@ LeShuffler/
 ├── Tools/                   # Python utilities
 │   ├── firmware_updater_encrypted.py    # USB firmware updater
 │   ├── encrypt_firmware.py              # Create encrypted .sfu files
-│   └── stlink_flasher.py                # ST-LINK factory flasher
+│   └── LeShuffler_ST-Link_Flasher.py    # ST-LINK factory flasher
 ├── Drivers/                 # STM32 HAL drivers
 ├── LCD/                     # Display drivers (ILI9488)
 ├── Motors/                  # Motor control (TMC2209, DC, Servo)
@@ -122,14 +122,14 @@ python encrypt_firmware.py LeShuffler.bin LeShuffler.sfu --keys test_keys.json
 python encrypt_firmware.py --generate-keys /secure/path/production_keys.json
 ```
 
-### stlink_flasher.py
+### LeShuffler_ST-Link_Flasher.py
 
 Factory programming via ST-LINK. Flashes both bootloader and firmware.
 
 ```bash
-python stlink_flasher.py                # Flash both
-python stlink_flasher.py --rdp 1        # Flash + enable read protection
-python stlink_flasher.py --firmware-only  # Firmware only
+python LeShuffler_ST-Link_Flasher.py                # Flash both
+python LeShuffler_ST-Link_Flasher.py --rdp 1        # Flash + enable read protection
+python LeShuffler_ST-Link_Flasher.py --firmware-only  # Firmware only
 ```
 
 **Required files** (in Tools folder):
@@ -276,10 +276,10 @@ rm /tmp/production_keys.json  # Delete immediately after use
 
 ### 5. Factory Flash (RDP Level 1)
 
-stlink_flasher.py looks for bootloader at `~/.leshuffler_keys/LeShuffler_Bootloader_E.bin` first.
+LeShuffler_ST-Link_Flasher.py looks for bootloader at `~/.leshuffler_keys/LeShuffler_Bootloader_E.bin` first.
 
 ```bash
-python Tools/stlink_flasher.py --rdp 1
+python Tools/LeShuffler_ST-Link_Flasher.py --rdp 1
 ```
 
 This:
@@ -340,7 +340,7 @@ For factory programming with RDP1 protection:
 
 ```powershell
 cd Tools
-python -m PyInstaller --onefile --name "LeShuffler_ST-Link_Flasher" --clean stlink_flasher.py
+python -m PyInstaller --onefile --name "LeShuffler_ST-Link_Flasher" --clean LeShuffler_ST-Link_Flasher.py
 ```
 
 **Output:** `dist/LeShuffler_ST-Link_Flasher.exe`

@@ -16,7 +16,7 @@ LeShuffler/
 ├── Tools/
 │   ├── firmware_updater.py           # USB updater (encrypted .sfu for v3.0+ bootloader)
 │   ├── encrypt_firmware.py           # Creates .sfu files (needs production_keys.json)
-│   ├── stlink_flasher.py             # Factory ST-LINK flasher (secure + local lookup)
+│   ├── LeShuffler_ST-Link_Flasher.py # Factory ST-LINK flasher (secure + local lookup)
 │   ├── LeShuffler_Image_Loader.py    # Image uploader source (exe in Manufacturing)
 │   ├── stlink_standalone_flasher.py  # Standalone flasher (Windows, uses st-flash)
 │   ├── remote_recovery_flasher.py    # Remote support flasher (self-deleting)
@@ -85,14 +85,14 @@ rm /tmp/production_keys.json
 5. Copy binary: `cp Bootloader_E/Debug/LeShuffler_Bootloader_E.bin ~/.leshuffler_keys/`
 6. **Revert crypto_keys.h to placeholders (all zeros)**
 
-### Factory Programming (stlink_flasher.py)
+### Factory Programming (LeShuffler_ST-Link_Flasher.py)
 
-stlink_flasher.py looks for bootloader in this order:
+LeShuffler_ST-Link_Flasher.py looks for bootloader in this order:
 1. `~/.leshuffler_keys/LeShuffler_Bootloader_E.bin` (secure, outside Dropbox)
 2. Same folder as script (fallback)
 
 ```bash
-python stlink_flasher.py --rdp 1 -y  # Flash + set RDP Level 1
+python LeShuffler_ST-Link_Flasher.py --rdp 1 -y  # Flash + set RDP Level 1
 # Then power cycle the device
 ```
 
@@ -130,7 +130,7 @@ alias stm32prog='"/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer
 - **CLI works for**: Flashing, setting RDP 0→1, mass erase at RDP 0
 - **GUI required for**: Mass erase at RDP 1, RDP 1→0 recovery
 - **Recovery**: GUI → OB tab → Set RDP to 0xAA → Apply (triggers mass erase)
-- **Factory command**: `python stlink_flasher.py --rdp 1 -y` then power cycle
+- **Factory command**: `python LeShuffler_ST-Link_Flasher.py --rdp 1 -y` then power cycle
 
 ### Git Safety
 - **NEVER** `git checkout <file>` to undo formatting - reverts ALL changes
@@ -264,7 +264,7 @@ python build_remote_flasher.py
 ### ST-LINK Factory Flasher
 ```powershell
 cd Tools
-python -m PyInstaller --onefile --name "LeShuffler_ST-Link_Flasher" --clean stlink_flasher.py
+python -m PyInstaller --onefile --name "LeShuffler_ST-Link_Flasher" --clean LeShuffler_ST-Link_Flasher.py
 # Output: dist/LeShuffler_ST-Link_Flasher.exe
 ```
 Usage: `LeShuffler_ST-Link_Flasher.exe --rdp 1 -y` (factory flash with RDP1, no prompts)

@@ -2415,12 +2415,12 @@ This is **inherent to v1.0 bootloader** - cannot be fixed by firmware update.
   ```
 
 **2. ST-LINK Factory Flasher**
-- **Source:** `Tools/stlink_flasher.py` (hybrid: looks in secure location first, then local)
+- **Source:** `Tools/LeShuffler_ST-Link_Flasher.py` (hybrid: looks in secure location first, then local)
 - **Executables:** `Tools/dist/LeShuffler_ST-Link_Flasher.exe` (reference) + `Manufacturing/APIC/Test_and_production_firmware/LeShuffler_ST-Link_Flasher.exe`
 - Build command:
   ```powershell
   cd Tools
-  python -m PyInstaller --onefile --name "LeShuffler_ST-Link_Flasher" --clean stlink_flasher.py
+  python -m PyInstaller --onefile --name "LeShuffler_ST-Link_Flasher" --clean LeShuffler_ST-Link_Flasher.py
   cp dist/LeShuffler_ST-Link_Flasher.exe ../../Manufacturing/APIC/Test_and_production_firmware/
   ```
 - Usage: `LeShuffler_ST-Link_Flasher.exe --rdp 1 -y`
