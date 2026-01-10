@@ -16,7 +16,8 @@ LeShuffler/
 ├── Tools/
 │   ├── firmware_updater.py           # USB updater (encrypted .sfu for v3.0+ bootloader)
 │   ├── encrypt_firmware.py           # Creates .sfu files (needs production_keys.json)
-│   ├── stlink_flasher.py             # Factory ST-LINK flasher (looks in ~/.leshuffler_keys/)
+│   ├── stlink_flasher.py             # Factory ST-LINK flasher (secure + local lookup)
+│   ├── LeShuffler_Image_Loader.py    # Image uploader source (exe in Manufacturing)
 │   ├── stlink_standalone_flasher.py  # Standalone flasher (Windows, uses st-flash)
 │   ├── remote_recovery_flasher.py    # Remote support flasher (self-deleting)
 │   ├── legacy_usb_updater.py         # Self-erasing USB updater for legacy devices
@@ -95,22 +96,22 @@ python stlink_flasher.py --rdp 1 -y  # Flash + set RDP Level 1
 # Then power cycle the device
 ```
 
-### Factory Image Loader (image_loader.py)
+### Factory Image Loader
 
-Location: `Manufacturing/APIC/Test_and_production_firmware/image_loader.py`
+**Source:** `Tools/LeShuffler_Image_Loader.py`
+**Executable:** `Manufacturing/APIC/Test_and_production_firmware/LeShuffler_Image_Loader.exe`
 
 Uploads C header image files to device external flash. CLI version (no GUI).
 
 ```bash
-python image_loader.py              # Upload all .h files from C_headers/
-python image_loader.py --erase      # Erase external flash only
-python image_loader.py --list       # List available ports
-python image_loader.py COM5         # Use specific port
+LeShuffler_Image_Loader.exe              # Upload all .h files from C_headers/
+LeShuffler_Image_Loader.exe --erase      # Erase external flash only
+LeShuffler_Image_Loader.exe --list       # List available ports
+LeShuffler_Image_Loader.exe COM5         # Use specific port
 ```
 
 - Auto-selects port when one LeShuffler device found
-- Looks for `C_headers/` folder in same directory
-- Build exe: `pyinstaller --onefile --name "LeShuffler_Image_Loader" image_loader.py`
+- Looks for `C_headers/` folder in same directory as exe
 
 ### STM32_Programmer_CLI
 
@@ -260,6 +261,33 @@ python build_remote_flasher.py
 ```
 **Do not distribute** - for remote support sessions only.
 
+### ST-LINK Factory Flasher
+```powershell
+cd Tools
+python -m PyInstaller --onefile --name "LeShuffler_ST-Link_Flasher" --clean stlink_flasher.py
+# Output: dist/LeShuffler_ST-Link_Flasher.exe
+```
+Usage: `LeShuffler_ST-Link_Flasher.exe --rdp 1 -y` (factory flash with RDP1, no prompts)
+
+### Image Loader (Manufacturing)
+Source in `Tools/`, exe goes to `Manufacturing/APIC/Test_and_production_firmware/`:
+```powershell
+cd Tools
+python -m PyInstaller --onefile --name "LeShuffler_Image_Loader" --collect-all serial --clean LeShuffler_Image_Loader.py
+# Copy to manufacturing folder:
+cp dist/LeShuffler_Image_Loader.exe ../../Manufacturing/APIC/Test_and_production_firmware/
+```
+
+**Manufacturing folder contents (executables only):**
+```
+Test_and_production_firmware/
+├── LeShuffler_Image_Loader.exe      # Image uploader
+├── LeShuffler_ST-Link_Flasher.exe   # Factory flasher
+├── LeShuffler.bin
+├── LeShuffler_Bootloader_E.bin
+└── C_headers/
+```
+
 ## Reference Files
 
 When updating documentation, update all three "reference files":
@@ -269,4 +297,4 @@ When updating documentation, update all three "reference files":
 
 ## Session History
 
-See `SESSION_LOG.md` for full development history (23 sessions).
+See `SESSION_LOG.md` for full development history (24 sessions).

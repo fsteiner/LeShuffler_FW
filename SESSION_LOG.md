@@ -2398,6 +2398,50 @@ This is **inherent to v1.0 bootloader** - cannot be fixed by firmware update.
 
 ---
 
+### 2025-01-10: Session 24 - Windows Executables for Factory Tools
+
+#### Created Windows executables for manufacturing tools:
+
+**1. Image Loader**
+- **Source:** `Tools/LeShuffler_Image_Loader.py`
+- **Executable:** `Manufacturing/APIC/Test_and_production_firmware/LeShuffler_Image_Loader.exe`
+- CLI tool for uploading C header images to external flash
+- Removed confirmation prompt for faster factory workflow
+- Build command:
+  ```powershell
+  cd Tools
+  python -m PyInstaller --onefile --name "LeShuffler_Image_Loader" --collect-all serial --clean LeShuffler_Image_Loader.py
+  cp dist/LeShuffler_Image_Loader.exe ../../Manufacturing/APIC/Test_and_production_firmware/
+  ```
+
+**2. ST-LINK Factory Flasher**
+- **Source:** `Tools/stlink_flasher.py` (hybrid: looks in secure location first, then local)
+- **Executables:** `Tools/dist/LeShuffler_ST-Link_Flasher.exe` (reference) + `Manufacturing/APIC/Test_and_production_firmware/LeShuffler_ST-Link_Flasher.exe`
+- Build command:
+  ```powershell
+  cd Tools
+  python -m PyInstaller --onefile --name "LeShuffler_ST-Link_Flasher" --clean stlink_flasher.py
+  cp dist/LeShuffler_ST-Link_Flasher.exe ../../Manufacturing/APIC/Test_and_production_firmware/
+  ```
+- Usage: `LeShuffler_ST-Link_Flasher.exe --rdp 1 -y`
+
+#### Manufacturing Folder Structure:
+```
+Test_and_production_firmware/
+├── LeShuffler_Image_Loader.exe      # Image uploader
+├── LeShuffler_ST-Link_Flasher.exe   # Factory flasher
+├── LeShuffler.bin
+├── LeShuffler_Bootloader_E.bin
+└── C_headers/
+```
+No .py files in manufacturing folder - source files kept in Tools/ only.
+
+#### Updated Documentation:
+- CLAUDE.md - Updated project structure and build commands
+- README.md - Updated build instructions and manufacturing folder layout
+
+---
+
 ### STM32H7 HAL Notes
 
 #### HASH Peripheral (STM32H7)

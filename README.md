@@ -334,6 +334,48 @@ python build_remote_flasher.py
 
 **Do not distribute** - for remote support sessions only.
 
+### ST-LINK Factory Flasher
+
+For factory programming with RDP1 protection:
+
+```powershell
+cd Tools
+python -m PyInstaller --onefile --name "LeShuffler_ST-Link_Flasher" --clean stlink_flasher.py
+```
+
+**Output:** `dist/LeShuffler_ST-Link_Flasher.exe`
+
+**Usage:**
+```
+LeShuffler_ST-Link_Flasher.exe --rdp 1 -y    # Factory flash with RDP1, no prompts
+LeShuffler_ST-Link_Flasher.exe --firmware-only  # Update firmware only
+LeShuffler_ST-Link_Flasher.exe --help        # Show all options
+```
+
+### Image Loader (Manufacturing)
+
+For uploading images to device external flash during manufacturing.
+
+**Source:** `Tools/LeShuffler_Image_Loader.py`
+**Executable:** `Manufacturing/APIC/Test_and_production_firmware/LeShuffler_Image_Loader.exe`
+
+```powershell
+cd Tools
+python -m PyInstaller --onefile --name "LeShuffler_Image_Loader" --collect-all serial --clean LeShuffler_Image_Loader.py
+# Copy to manufacturing folder:
+cp dist/LeShuffler_Image_Loader.exe ../../Manufacturing/APIC/Test_and_production_firmware/
+```
+
+**Manufacturing folder contents:**
+```
+Test_and_production_firmware/
+├── LeShuffler_Image_Loader.exe      # Image uploader
+├── LeShuffler_ST-Link_Flasher.exe   # Factory flasher
+├── LeShuffler.bin
+├── LeShuffler_Bootloader_E.bin
+└── C_headers/                        # Image header files
+```
+
 ## Versioning
 
 ### Firmware Version
@@ -410,7 +452,7 @@ Production devices use **RDP Level 1**.
 
 ## Development History
 
-See `SESSION_LOG.md` for the full development history of the encrypted bootloader system (23 sessions covering bootloader versions, crypto implementation, debugging, and production setup).
+See `SESSION_LOG.md` for the full development history of the encrypted bootloader system (24 sessions covering bootloader versions, crypto implementation, debugging, and production setup).
 
 ## License
 
