@@ -278,14 +278,25 @@ python -m PyInstaller --onefile --name "LeShuffler_Image_Loader" --collect-all s
 cp dist/LeShuffler_Image_Loader.exe ../../Manufacturing/APIC/Test_and_production_firmware/
 ```
 
-**Manufacturing folder contents (executables only):**
+**Manufacturing folder contents:**
 ```
 Test_and_production_firmware/
 ├── LeShuffler_Image_Loader.exe      # Image uploader
-├── LeShuffler_ST-Link_Flasher.exe   # Factory flasher
-├── LeShuffler.bin
-├── LeShuffler_Bootloader_E.bin
-└── C_headers/
+├── LeShuffler_ST-Link_Flasher.exe   # ST-LINK factory flasher
+├── LeShuffler_Updater.exe           # USB firmware updater
+├── LeShuffler.bin                   # Plain firmware (for ST-LINK)
+├── LeShuffler.sfu                   # Encrypted firmware (for USB update)
+├── LeShuffler_Bootloader_E.bin      # Bootloader with embedded keys
+└── C_headers/                       # Image header files
+```
+
+### TODO: Build LeShuffler_Updater.exe (Windows)
+```powershell
+cd Tools
+python -m PyInstaller --onefile --name "LeShuffler_Updater" --collect-all serial --clean LeShuffler_Updater.py
+cp dist/LeShuffler_Updater.exe "..\..\Manufacturing\APIC\Test_and_production_firmware\"
+# Clean build artifacts:
+rm -r build, dist, *.spec
 ```
 
 ## Reference Files

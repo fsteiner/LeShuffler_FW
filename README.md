@@ -370,10 +370,12 @@ cp dist/LeShuffler_Image_Loader.exe ../../Manufacturing/APIC/Test_and_production
 ```
 Test_and_production_firmware/
 ├── LeShuffler_Image_Loader.exe      # Image uploader
-├── LeShuffler_ST-Link_Flasher.exe   # Factory flasher
-├── LeShuffler.bin
-├── LeShuffler_Bootloader_E.bin
-└── C_headers/                        # Image header files
+├── LeShuffler_ST-Link_Flasher.exe   # ST-LINK factory flasher
+├── LeShuffler_Updater.exe           # USB firmware updater
+├── LeShuffler.bin                   # Plain firmware (for ST-LINK)
+├── LeShuffler.sfu                   # Encrypted firmware (for USB update)
+├── LeShuffler_Bootloader_E.bin      # Bootloader with embedded keys
+└── C_headers/                       # Image header files
 ```
 
 ## Versioning
