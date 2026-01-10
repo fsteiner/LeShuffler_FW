@@ -2400,44 +2400,42 @@ This is **inherent to v1.0 bootloader** - cannot be fixed by firmware update.
 
 ### 2025-01-10: Session 24 - Windows Executables for Factory Tools
 
-#### Created Windows executables for manufacturing tools:
+#### Renamed Tools to Consistent Naming Convention:
+- `firmware_updater.py` → `LeShuffler_Updater.py`
+- `stlink_flasher.py` → `LeShuffler_ST-Link_Flasher.py`
+- `image_loader.py` → `LeShuffler_Image_Loader.py`
 
-**1. Image Loader**
+#### Created Windows Executables:
+
+**1. LeShuffler_Image_Loader.exe**
 - **Source:** `Tools/LeShuffler_Image_Loader.py`
-- **Executable:** `Manufacturing/APIC/Test_and_production_firmware/LeShuffler_Image_Loader.exe`
 - CLI tool for uploading C header images to external flash
 - Removed confirmation prompt for faster factory workflow
-- Build command:
-  ```powershell
-  cd Tools
-  python -m PyInstaller --onefile --name "LeShuffler_Image_Loader" --collect-all serial --clean LeShuffler_Image_Loader.py
-  cp dist/LeShuffler_Image_Loader.exe ../../Manufacturing/APIC/Test_and_production_firmware/
-  ```
 
-**2. ST-LINK Factory Flasher**
-- **Source:** `Tools/LeShuffler_ST-Link_Flasher.py` (hybrid: looks in secure location first, then local)
-- **Executables:** `Tools/dist/LeShuffler_ST-Link_Flasher.exe` (reference) + `Manufacturing/APIC/Test_and_production_firmware/LeShuffler_ST-Link_Flasher.exe`
-- Build command:
-  ```powershell
-  cd Tools
-  python -m PyInstaller --onefile --name "LeShuffler_ST-Link_Flasher" --clean LeShuffler_ST-Link_Flasher.py
-  cp dist/LeShuffler_ST-Link_Flasher.exe ../../Manufacturing/APIC/Test_and_production_firmware/
-  ```
+**2. LeShuffler_ST-Link_Flasher.exe**
+- **Source:** `Tools/LeShuffler_ST-Link_Flasher.py`
+- Hybrid lookup: secure location (`~/.leshuffler_keys/`) first, then local folder
 - Usage: `LeShuffler_ST-Link_Flasher.exe --rdp 1 -y`
 
-#### Manufacturing Folder Structure:
+**3. LeShuffler_Updater.exe**
+- **Source:** `Tools/LeShuffler_Updater.py`
+- USB firmware updater for encrypted .sfu files (v3.0+ bootloader)
+
+#### Final Manufacturing Folder Structure:
 ```
 Test_and_production_firmware/
 ├── LeShuffler_Image_Loader.exe      # Image uploader
-├── LeShuffler_ST-Link_Flasher.exe   # Factory flasher
-├── LeShuffler.bin
-├── LeShuffler_Bootloader_E.bin
-└── C_headers/
+├── LeShuffler_ST-Link_Flasher.exe   # ST-LINK factory flasher
+├── LeShuffler_Updater.exe           # USB firmware updater
+├── LeShuffler.bin                   # Plain firmware (for ST-LINK)
+├── LeShuffler.sfu                   # Encrypted firmware (for USB update)
+├── LeShuffler_Bootloader_E.bin      # Bootloader with embedded keys
+└── C_headers/                       # Image header files
 ```
 No .py files in manufacturing folder - source files kept in Tools/ only.
 
 #### Updated Documentation:
-- CLAUDE.md - Updated project structure and build commands
+- CLAUDE.md - Updated project structure, tool names, and build commands
 - README.md - Updated build instructions and manufacturing folder layout
 
 ---

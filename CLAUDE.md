@@ -14,18 +14,15 @@ LeShuffler/
 ├── Core/                  # Application firmware
 ├── Bootloader_E/          # Encrypted bootloader (v3.0) - ACTIVE
 ├── Tools/
-│   ├── LeShuffler_Updater.py         # USB updater (encrypted .sfu for v3.0+ bootloader)
-│   ├── encrypt_firmware.py           # Creates .sfu files (needs production_keys.json)
-│   ├── LeShuffler_ST-Link_Flasher.py # Factory ST-LINK flasher (secure + local lookup)
-│   ├── LeShuffler_Image_Loader.py    # Image uploader source (exe in Manufacturing)
-│   ├── stlink_standalone_flasher.py  # Standalone flasher (Windows, uses st-flash)
-│   ├── remote_recovery_flasher.py    # Remote support flasher (self-deleting)
-│   ├── legacy_usb_updater.py         # Self-erasing USB updater for legacy devices
-│   ├── LeShuffler.bin                # Plain firmware (for ST-LINK)
-│   └── LeShuffler.sfu                # Encrypted firmware (for USB update)
+│   ├── LeShuffler_Updater.py         # USB updater (encrypted .sfu)
+│   ├── LeShuffler_ST-Link_Flasher.py # ST-LINK factory flasher
+│   ├── LeShuffler_Image_Loader.py    # Image uploader
+│   ├── encrypt_firmware.py           # Creates .sfu files
+│   ├── LeShuffler.bin                # Plain firmware
+│   └── LeShuffler.sfu                # Encrypted firmware
 ├── Legacy/
-│   ├── Bootloader/              # Non-encrypted bootloader (old devices)
-│   └── Tools/
+│   ├── Bootloader/                   # Non-encrypted bootloader (v1.x/v2.x)
+│   └── Tools/                        # Legacy/rare tools (remote recovery, standalone flasher, etc.)
 └── README.md              # Full project documentation
 ```
 
@@ -288,15 +285,6 @@ Test_and_production_firmware/
 ├── LeShuffler.sfu                   # Encrypted firmware (for USB update)
 ├── LeShuffler_Bootloader_E.bin      # Bootloader with embedded keys
 └── C_headers/                       # Image header files
-```
-
-### TODO: Build LeShuffler_Updater.exe (Windows)
-```powershell
-cd Tools
-python -m PyInstaller --onefile --name "LeShuffler_Updater" --collect-all serial --clean LeShuffler_Updater.py
-cp dist/LeShuffler_Updater.exe "..\..\Manufacturing\APIC\Test_and_production_firmware\"
-# Clean build artifacts:
-rm -r build, dist, *.spec
 ```
 
 ## Reference Files
