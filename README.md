@@ -74,11 +74,11 @@ This is **inherent to v1.0 bootloader** - cannot be fixed by firmware update alo
 
 1. On device: Settings → Maintenance → Firmware Update
 2. Wait for 3 short beeps + 1 long beep (bootloader ready)
-3. On PC: Run `python Tools/firmware_updater.py`
+3. On PC: Run `python Tools/LeShuffler_Updater.py`
 4. Select COM port and wait for transfer to complete
 
 **Updaters by bootloader version:**
-- v3.0+ bootloader: Use `firmware_updater.py` with `.sfu` file
+- v3.0+ bootloader: Use `LeShuffler_Updater.py` with `.sfu` file
 - v1.x/v2.x bootloader: Use `legacy_usb_updater.py` (self-erasing exe)
 
 ### Service Mode Shortcut (v1.0.2+)
@@ -95,14 +95,14 @@ This allows firmware updates on low-power USB ports (laptops) that can't power t
 
 ## Tools
 
-### firmware_updater.py
+### LeShuffler_Updater.py
 
 USB firmware updater for encrypted .sfu files (requires v3.0+ bootloader).
 
 ```bash
-python firmware_updater.py              # Interactive
-python firmware_updater.py COM5         # Direct
-python firmware_updater.py --list       # List ports
+python LeShuffler_Updater.py              # Interactive
+python LeShuffler_Updater.py COM5         # Direct
+python LeShuffler_Updater.py --list       # List ports
 ```
 
 **Required files** (in Tools folder):
@@ -300,7 +300,7 @@ pip install pyinstaller pyserial
 
 ```powershell
 cd Tools
-python -m PyInstaller --onefile --name "LeShuffler_Updater" --collect-all serial --clean firmware_updater.py
+python -m PyInstaller --onefile --name "LeShuffler_Updater" --collect-all serial --clean LeShuffler_Updater.py
 ```
 
 **Output:** `dist/LeShuffler_Updater.exe`

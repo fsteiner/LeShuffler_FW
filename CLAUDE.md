@@ -14,7 +14,7 @@ LeShuffler/
 ├── Core/                  # Application firmware
 ├── Bootloader_E/          # Encrypted bootloader (v3.0) - ACTIVE
 ├── Tools/
-│   ├── firmware_updater.py           # USB updater (encrypted .sfu for v3.0+ bootloader)
+│   ├── LeShuffler_Updater.py         # USB updater (encrypted .sfu for v3.0+ bootloader)
 │   ├── encrypt_firmware.py           # Creates .sfu files (needs production_keys.json)
 │   ├── LeShuffler_ST-Link_Flasher.py # Factory ST-LINK flasher (secure + local lookup)
 │   ├── LeShuffler_Image_Loader.py    # Image uploader source (exe in Manufacturing)
@@ -240,7 +240,7 @@ pip install pyinstaller pyserial
 ### Encrypted Updater (for v3.0 bootloader)
 ```powershell
 cd Tools
-python -m PyInstaller --onefile --name "LeShuffler_Updater" --collect-all serial --clean firmware_updater.py
+python -m PyInstaller --onefile --name "LeShuffler_Updater" --collect-all serial --clean LeShuffler_Updater.py
 # Output: dist/LeShuffler_Updater.exe
 ```
 Distribute with `LeShuffler.sfu` file.
