@@ -2440,6 +2440,94 @@ No .py files in manufacturing folder - source files kept in Tools/ only.
 
 ---
 
+### 2025-01-10: Session 25 - Dropbox Cleanup & Tools Reorganization
+
+#### Dropbox Cleanup (7.8 GB → 368 MB):
+
+Deleted obsolete folders from `Product_Design/Software/`:
+
+| Folder | Size | Reason |
+|--------|------|--------|
+| `Past versions/` (46 folders) | ~6.2 GB | Old versions, superseded by Git |
+| `Encrypted_Bootloader/` | 1.3 GB | Old SBSFU approach, abandoned |
+| `LeShuffler_Version_D/` | 16 MB | Development folder, merged |
+| `Bootload test/` | ~50 MB | Merged into main repo Legacy/ |
+| `.metadata/` | 44 MB | Eclipse workspace, machine-specific |
+
+**Preserved:** Moved 4 folders up one level before deletion:
+- `Python_scripts/`
+- `Arduino sketchbooks/`
+- `Arduino_logs/`
+- `pcg-c-basic/`
+
+#### Crypto Keys Clarification:
+
+| Location | Contents | Notes |
+|----------|----------|-------|
+| **1Password** | `production_keys.json` | **ONLY permanent location** |
+| `~/.leshuffler_keys/` | `LeShuffler_Bootloader_E.bin` | Bootloader binary only (not keys) |
+
+Production keys are retrieved from 1Password to `/tmp/` temporarily when creating .sfu files, then deleted immediately.
+
+#### Firmware Updater Improvements:
+
+**Auto-select port** when exactly one LeShuffler device found:
+```python
+leshuffler_ports = [p for p in ports if p['is_stm32']]
+if len(leshuffler_ports) == 1:
+    print(f"\n  Auto-selected: {port['device']}")
+    return port['device']
+```
+
+**Mac: Prefer cu.* over tty.*** (doesn't wait for carrier detect):
+- Filter out tty.* duplicates when cu.* exists for same device
+- Better UX on macOS
+
+#### Image Loader Created:
+
+**Tools/LeShuffler_Image_Loader.py** - Simplified CLI version:
+- No GUI (CLI like firmware updater)
+- No logos, no Excel exports
+- "Folder" mode only with C_headers/
+- Auto port selection
+- For factory image uploads to external flash
+
+#### Tools Folder Cleanup:
+
+**Deleted debug files:**
+- `debug_hash_capture.py`
+- `debug_verify_sfu.py`
+- `option_bytes_baseline.txt`
+- `test_keys.json` (was gitignored)
+- `dist/` folder
+
+**Moved to Legacy/Tools:**
+- `legacy_usb_updater.py`
+- `build_legacy_updater.py`
+- `remote_recovery_flasher.py`
+- `build_remote_flasher.py`
+- `stlink_standalone_flasher.py`
+- `STANDALONE_FLASHER_README.md`
+
+#### Firmware v1.0.2 Update:
+
+- Copied `Debug/LeShuffler.bin` (v1.0.2, Jan 10 18:03) to Tools/ and Manufacturing/
+- Created new `LeShuffler.sfu` using production keys from 1Password
+- Both Tools/ and Manufacturing/ now have current firmware
+
+#### Final Tools Folder Structure:
+```
+Tools/
+├── LeShuffler_Updater.py         # USB updater (encrypted .sfu)
+├── LeShuffler_ST-Link_Flasher.py # ST-LINK factory flasher
+├── LeShuffler_Image_Loader.py    # Image uploader
+├── encrypt_firmware.py           # Creates .sfu files
+├── LeShuffler.bin                # Plain firmware (v1.0.2)
+└── LeShuffler.sfu                # Encrypted firmware (v1.0.2)
+```
+
+---
+
 ### STM32H7 HAL Notes
 
 #### HASH Peripheral (STM32H7)
