@@ -98,7 +98,9 @@ def list_serial_ports():
         ports.append(info)
 
     if platform.system() == 'Darwin':
-        usbmodem_ports = glob.glob('/dev/tty.usbmodem*')
+        # On Mac, prefer cu.* over tty.* for outgoing connections
+        # cu.* doesn't wait for carrier detect, better for firmware updates
+        usbmodem_ports = glob.glob('/dev/cu.usbmodem*')
         existing_devices = [p['device'] for p in ports]
         for device in usbmodem_ports:
             if device not in existing_devices:
@@ -108,6 +110,14 @@ def list_serial_ports():
                     'hwid': '',
                     'is_stm32': True
                 })
+
+        # Filter out tty.* duplicates when cu.* exists for same device
+        # e.g., if cu.usbmodem1234 exists, remove tty.usbmodem1234
+        cu_ports = set(p['device'] for p in ports if '/dev/cu.' in p['device'])
+        ports = [p for p in ports if not (
+            '/dev/tty.' in p['device'] and
+            p['device'].replace('/dev/tty.', '/dev/cu.') in cu_ports
+        )]
 
     ports.sort(key=lambda p: (not p['is_stm32'], p['device']))
     return ports
@@ -147,6 +157,20 @@ def display_port_menu(ports):
 def select_port_interactive():
     while True:
         ports = list_serial_ports()
+
+        # Auto-select if exactly one LeShuffler device found
+        leshuffler_ports = [p for p in ports if p['is_stm32']]
+        if len(leshuffler_ports) == 1:
+            port = leshuffler_ports[0]
+            print("\n" + "=" * 60)
+            print("  DEVICE DETECTED")
+            print("=" * 60)
+            print(f"\n  Auto-selected: {port['device']}")
+            print(f"                 {port['description']} [LeShuffler]")
+            print("")
+            return port['device']
+
+        # Multiple devices or none detected - show menu
         result = display_port_menu(ports)
         if result == 'REFRESH':
             print("\n  Scanning for ports...")
@@ -251,7 +275,10 @@ class EncryptedFirmwareUpdater:
         if os.path.exists(self.port):
             return self.port
         if 'usbmodem' in self.port:
-            found = glob.glob('/dev/tty.usbmodem*')
+            # Prefer cu.* over tty.* on Mac (cu.* doesn't wait for carrier detect)
+            found = glob.glob('/dev/cu.usbmodem*')
+            if not found:
+                found = glob.glob('/dev/tty.usbmodem*')
             if found:
                 return sorted(found)[0]
         elif 'ttyACM' in self.port:
