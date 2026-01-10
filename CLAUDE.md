@@ -14,17 +14,14 @@ LeShuffler/
 ├── Core/                  # Application firmware
 ├── Bootloader_E/          # Encrypted bootloader (v3.0) - ACTIVE
 ├── Tools/
-│   ├── firmware_updater.py           # USB updater (encrypted only, v3.0+ bootloader)
-│   ├── encrypt_firmware.py           # Creates .sfu files
-│   ├── stlink_flasher.py             # Factory ST-LINK flasher (requires STM32CubeProg)
+│   ├── firmware_updater.py           # USB updater (encrypted .sfu for v3.0+ bootloader)
+│   ├── encrypt_firmware.py           # Creates .sfu files (needs production_keys.json)
+│   ├── stlink_flasher.py             # Factory ST-LINK flasher (looks in ~/.leshuffler_keys/)
 │   ├── stlink_standalone_flasher.py  # Standalone flasher (Windows, uses st-flash)
-│   ├── remote_recovery_flasher.py    # Remote support flasher (self-deleting, ST-LINK)
-│   ├── build_remote_flasher.py       # Build script for remote flasher
+│   ├── remote_recovery_flasher.py    # Remote support flasher (self-deleting)
 │   ├── legacy_usb_updater.py         # Self-erasing USB updater for legacy devices
-│   ├── build_legacy_updater.py       # Build script for legacy updater
-│   ├── LeShuffler.bin                # Plain firmware
-│   ├── LeShuffler.sfu                # Encrypted firmware
-│   └── LeShuffler_Bootloader_E.bin
+│   ├── LeShuffler.bin                # Plain firmware (for ST-LINK)
+│   └── LeShuffler.sfu                # Encrypted firmware (for USB update)
 ├── Legacy/
 │   ├── Bootloader/              # Non-encrypted bootloader (old devices)
 │   └── Tools/
@@ -50,25 +47,53 @@ rm /tmp/production_keys.json  # Delete after use
 ```
 **CRITICAL**: `.sfu` must be regenerated using **production keys** from 1Password
 
-### crypto_keys.h Security
-- **Location**: `Bootloader_E/Core/Inc/crypto_keys.h`
-- **Contains**: Placeholders (zeros) - NOT production keys
-- **Gitignored**: Yes
-- **Dropbox-ignored**: Yes (`xattr -w com.dropbox.ignored 1`)
-- **Production keys**: **1Password only** (not on filesystem)
+### Crypto Keys Locations
 
-**To rebuild Bootloader_E**:
+| Location | Contents | Notes |
+|----------|----------|-------|
+| **1Password** | `production_keys.json` | **ONLY permanent location** for keys |
+| `~/.leshuffler_keys/` | `LeShuffler_Bootloader_E.bin` | Bootloader with embedded AES + ECDSA public |
+| `Bootloader_E/Core/Inc/crypto_keys.h` | Placeholders (zeros) | Gitignored, safe |
+| `Tools/test_keys.json` | Test keys | Don't match production bootloader |
+
+**Key types in production_keys.json:**
+- `aes_key` - AES-256 symmetric key (decrypt firmware)
+- `ecdsa_private_key` - Signs firmware (MOST SENSITIVE - allows signing malicious FW)
+- `ecdsa_public_key` - Verifies signature (embedded in bootloader, safe to expose)
+
+### Workflow: Create Encrypted Firmware (.sfu)
+
+```bash
+# 1. Export production_keys.json from 1Password to temp location
+#    (Copy JSON content to /tmp/production_keys.json)
+
+# 2. Encrypt firmware
+python3 Tools/encrypt_firmware.py Tools/LeShuffler.bin Tools/LeShuffler.sfu \
+    --keys /tmp/production_keys.json
+
+# 3. DELETE keys immediately
+rm /tmp/production_keys.json
+```
+
+### Workflow: Rebuild Bootloader_E (rare)
+
 1. Open 1Password → find `production_keys.json`
-2. Copy `aes_key` → paste into `AES_KEY[32]` in `crypto_keys.h`
-3. Copy `ecdsa_public_key` → paste into `ECDSA_PUBLIC_KEY[64]`
+2. Copy `aes_key` array → paste into `AES_KEY[32]` in `crypto_keys.h`
+3. Copy `ecdsa_public_key` array → paste into `ECDSA_PUBLIC_KEY[64]`
 4. Build in STM32CubeIDE
-5. Copy binary: `cp Bootloader_E/Debug/*.bin Tools/`
-6. **Revert crypto_keys.h to placeholders**
+5. Copy binary: `cp Bootloader_E/Debug/LeShuffler_Bootloader_E.bin ~/.leshuffler_keys/`
+6. **Revert crypto_keys.h to placeholders (all zeros)**
 
-**To create .sfu files**:
-1. Export `production_keys.json` from 1Password to `/tmp/`
-2. Run: `python3 Tools/encrypt_firmware.py Tools/LeShuffler.bin Tools/LeShuffler.sfu --keys /tmp/production_keys.json`
-3. Delete: `rm /tmp/production_keys.json`
+### Factory Programming (stlink_flasher.py)
+
+stlink_flasher.py looks for bootloader in this order:
+1. `~/.leshuffler_keys/LeShuffler_Bootloader_E.bin` (secure, outside Dropbox)
+2. Same folder as script (fallback)
+
+```bash
+python stlink_flasher.py --rdp 1 -y  # Flash + set RDP Level 1
+# Then power cycle the device
+```
 
 ### STM32_Programmer_CLI
 

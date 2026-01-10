@@ -256,23 +256,35 @@ python Tools/encrypt_firmware.py --generate-keys /tmp/production_keys.json
 rm /tmp/production_keys.json
 ```
 
-### 3. Build with Production Keys
+### 3. Build with Production Keys (rare - only when rebuilding bootloader)
 
 1. Open 1Password → find `production_keys.json`
 2. Copy `aes_key` array → paste into `AES_KEY[32]` in `crypto_keys.h`
 3. Copy `ecdsa_public_key` array → paste into `ECDSA_PUBLIC_KEY[64]`
 4. Rebuild Bootloader_E project
-5. **Revert crypto_keys.h to placeholders after build**
+5. Copy binary to secure location: `cp Bootloader_E/Debug/LeShuffler_Bootloader_E.bin ~/.leshuffler_keys/`
+6. **Revert crypto_keys.h to placeholders after build**
 
-### 4. Factory Flash (RDP Level 1)
+### 4. Create Encrypted Firmware (.sfu)
+
+```bash
+# Export production_keys.json from 1Password to /tmp/production_keys.json
+python Tools/encrypt_firmware.py Tools/LeShuffler.bin Tools/LeShuffler.sfu \
+    --keys /tmp/production_keys.json
+rm /tmp/production_keys.json  # Delete immediately after use
+```
+
+### 5. Factory Flash (RDP Level 1)
+
+stlink_flasher.py looks for bootloader at `~/.leshuffler_keys/LeShuffler_Bootloader_E.bin` first.
 
 ```bash
 python Tools/stlink_flasher.py --rdp 1
 ```
 
 This:
-- Flashes bootloader with production keys
-- Flashes application firmware
+- Flashes bootloader from `~/.leshuffler_keys/` (contains embedded AES key)
+- Flashes application firmware from `Tools/LeShuffler.bin`
 - Enables read protection (flash cannot be read, but can be erased and reflashed)
 
 ## Building Windows Executables
@@ -330,10 +342,10 @@ Defined in `Core/Inc/version.h`:
 ```c
 #define FW_VERSION_MAJOR  1
 #define FW_VERSION_MINOR  0
-#define FW_VERSION_PATCH  1
+#define FW_VERSION_PATCH  2
 ```
 
-Displayed as "v1.0.1" in Settings → About.
+Displayed as "v1.0.2" in Settings → About.
 
 ### Bootloader Version
 
@@ -341,20 +353,28 @@ Stored at fixed address `0x0800BFF0`. Application can read via `GetBootloaderVer
 
 ## Security
 
-### Key Management
+### Key Storage Locations
 
-| Key | Location | Purpose |
-|-----|----------|---------|
-| AES-256 | `crypto_keys.h` (bootloader flash) | Decrypt firmware |
-| ECDSA Private | **1Password only** | Sign firmware |
-| ECDSA Public | `crypto_keys.h` (bootloader flash) | Verify signature |
+| Location | Contents | Notes |
+|----------|----------|-------|
+| **1Password** | `production_keys.json` | **ONLY permanent location** for all keys |
+| `~/.leshuffler_keys/` | `LeShuffler_Bootloader_E.bin` | Bootloader binary with embedded AES + ECDSA public |
+| `crypto_keys.h` | Placeholders (zeros) | Gitignored - real keys never on filesystem |
+| `Tools/test_keys.json` | Test keys only | Don't match production bootloader |
 
-**Production keys** (`production_keys.json`) are stored **only in 1Password** - never on filesystem.
+### Key Types
+
+| Key | Purpose | Risk if Leaked |
+|-----|---------|----------------|
+| AES-256 | Decrypt .sfu firmware | Firmware can be decrypted |
+| ECDSA Private | Sign firmware | **CRITICAL** - attacker can sign malicious FW |
+| ECDSA Public | Verify signature | Safe (embedded in bootloader) |
 
 **Never commit:**
 - `crypto_keys.h` (with real keys)
 - `*_keys.json` (key files)
 - `*.pem` (exported keys)
+- `LeShuffler_Bootloader_E.bin` (contains embedded AES key)
 
 ### Read Protection (RDP)
 
