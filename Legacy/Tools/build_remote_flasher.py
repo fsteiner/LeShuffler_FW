@@ -29,7 +29,7 @@ def main():
 
     # Paths
     bootloader_path = script_dir / "LeShuffler_Bootloader_E.bin"
-    template_path = script_dir / "remote_recovery_flasher.py"
+    template_path = script_dir / "LeShuffler_Remote_Recovery.py"
     output_script = script_dir / "_remote_flasher_embedded.py"
 
     print("="*60)

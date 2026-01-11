@@ -14,9 +14,15 @@ LeShuffler/
 │   ├── Core/Inc/crypto_keys.h.template  # Key template (copy to crypto_keys.h)
 │   └── ...
 ├── Tools/                   # Python utilities
-│   ├── firmware_updater_encrypted.py    # USB firmware updater
-│   ├── encrypt_firmware.py              # Create encrypted .sfu files
-│   └── LeShuffler_ST-Link_Flasher.py    # ST-LINK factory flasher
+│   ├── LeShuffler_Updater.py            # USB firmware updater (encrypted)
+│   ├── LeShuffler_ST-Link_Flasher.py    # ST-LINK factory flasher
+│   ├── LeShuffler_Image_Loader.py       # Image uploader for manufacturing
+│   └── encrypt_firmware.py              # Create encrypted .sfu files
+├── Legacy/Tools/            # Legacy device support
+│   ├── LeShuffler_Legacy_Updater.py     # Self-erasing updater template
+│   ├── LeShuffler_Remote_Recovery.py    # Remote recovery template
+│   ├── build_legacy_updater.py          # Build legacy updater exe
+│   └── build_remote_flasher.py          # Build remote recovery exe
 ├── Drivers/                 # STM32 HAL drivers
 ├── LCD/                     # Display drivers (ILI9488)
 ├── Motors/                  # Motor control (TMC2209, DC, Servo)
@@ -78,8 +84,8 @@ This is **inherent to v1.0 bootloader** - cannot be fixed by firmware update alo
 4. Select COM port and wait for transfer to complete
 
 **Updaters by bootloader version:**
-- v3.0+ bootloader: Use `LeShuffler_Updater.py` with `.sfu` file
-- v1.x/v2.x bootloader: Use `legacy_usb_updater.py` (self-erasing exe)
+- v3.0+ bootloader: Use `LeShuffler_Updater.exe` with `.sfu` file
+- v1.x/v2.x bootloader: Use `LeShuffler_Legacy_Updater.exe` (self-erasing, firmware embedded)
 
 ### Service Mode Shortcut (v1.0.2+)
 
@@ -108,7 +114,7 @@ python LeShuffler_Updater.py --list       # List ports
 **Required files** (in Tools folder):
 - `LeShuffler.sfu` - Encrypted firmware
 
-For legacy bootloaders (v1.x/v2.x), use `legacy_usb_updater.py` instead.
+For legacy bootloaders (v1.x/v2.x), use `LeShuffler_Legacy_Updater.exe` instead (see Legacy Tools below).
 
 ### encrypt_firmware.py
 
@@ -138,41 +144,18 @@ python LeShuffler_ST-Link_Flasher.py --firmware-only  # Firmware only
 
 **Requires:** [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html)
 
-### stlink_standalone_flasher.py (Windows)
-
-Lightweight ST-LINK flasher for end-user recovery. No STM32CubeProgrammer installation required.
-
-Uses [stlink tools](https://github.com/stlink-org/stlink/releases) (`st-flash.exe`) instead.
-
-```bash
-python stlink_standalone_flasher.py              # Flash both
-python stlink_standalone_flasher.py --firmware   # Firmware only
-python stlink_standalone_flasher.py --erase      # Mass erase only
-```
-
-**Distribution package for end users** (~10 MB):
-```
-LeShuffler_Recovery/
-├── LeShuffler_STLink_Flasher.exe    # Built with PyInstaller
-├── st-flash.exe                      # From stlink-org/stlink
-├── LeShuffler_Bootloader_E.bin
-├── LeShuffler.bin
-└── README.txt
-```
-
-See `Tools/STANDALONE_FLASHER_README.md` for build instructions.
-
-### remote_recovery_flasher.py (Remote Support)
+### LeShuffler_Remote_Recovery.py (Remote Support)
 
 **Why not distribute the bootloader binary?** The bootloader contains the AES-256 key. Anyone with the bootloader could decrypt .sfu files and extract the firmware.
 
 **Solution:** Remote support session (TeamViewer/AnyDesk) where you control the flashing.
 
-#### Build the remote flasher (one-time)
+#### Build the remote flasher (one-time, bootloader rarely changes)
 
 ```powershell
-cd Tools
-# Ensure LeShuffler_Bootloader_E.bin is present
+cd Legacy\Tools
+# Copy bootloader from manufacturing folder
+copy ..\..\..\Manufacturing\APIC\Test_and_production_firmware\LeShuffler_Bootloader_E.bin .
 python build_remote_flasher.py
 # Output: dist/LeShuffler_Remote_Recovery.exe (~8 MB)
 ```
@@ -199,19 +182,36 @@ python build_remote_flasher.py
 
 Download OpenOCD for Windows: https://github.com/openocd-org/openocd/releases
 
-### legacy_usb_updater.py (Self-Erasing USB Update)
+### LeShuffler_Legacy_Updater.py (Self-Erasing USB Update)
 
 For legacy devices (v1.x/v2.x bootloader) without RDP protection. Prevents casual copying of firmware .bin files.
 
-#### Build
+**IMPORTANT:** This exe embeds the firmware binary and must be **rebuilt for each firmware release**.
+
+#### Build (required for each firmware version)
 
 ```powershell
-cd Tools
+cd Legacy\Tools
+
+# Copy current firmware from Tools folder
+copy ..\..\Tools\LeShuffler.bin .
+
+# Build the exe (embeds firmware)
 python build_legacy_updater.py
+
 # Output: dist/LeShuffler_Legacy_Updater.exe
+# Distribute this single exe to users with legacy devices
 ```
 
-#### Usage
+#### When to rebuild
+
+| Scenario | Rebuild Required? |
+|----------|-------------------|
+| New firmware version released | **YES** - firmware is embedded |
+| Same firmware, new user | No - reuse existing exe |
+| Bootloader changes | No - bootloader not embedded |
+
+#### Usage (end user)
 
 1. User puts device in bootloader mode (Settings > Maintenance > Firmware Update)
 2. Wait for 3 beeps + 1 long beep
@@ -291,6 +291,16 @@ This:
 
 For distributing update tools to end users without Python.
 
+### Rebuild Requirements Summary
+
+| Tool | Embeds | Rebuild When |
+|------|--------|--------------|
+| `LeShuffler_Updater.exe` | Nothing (loads .sfu at runtime) | Script changes only |
+| `LeShuffler_ST-Link_Flasher.exe` | Nothing (loads .bin at runtime) | Script changes only |
+| `LeShuffler_Image_Loader.exe` | Nothing (loads headers at runtime) | Script changes only |
+| `LeShuffler_Legacy_Updater.exe` | **Firmware .bin** | **Every firmware release** |
+| `LeShuffler_Remote_Recovery.exe` | Bootloader .bin | Bootloader changes (rare) |
+
 **Prerequisites:**
 ```powershell
 pip install pyinstaller pyserial
@@ -314,23 +324,37 @@ LeShuffler_Update/
 
 ### Legacy Updater (for v1.x/v2.x bootloader devices)
 
-```powershell
-cd Tools
-python build_legacy_updater.py
-```
+**Must rebuild for each firmware release** - firmware is embedded in exe.
 
-**Output:** `dist/LeShuffler_Legacy_Updater.exe`
+```powershell
+cd Legacy\Tools
+
+# 1. Copy current firmware
+copy ..\..\Tools\LeShuffler.bin .
+
+# 2. Build exe with embedded firmware
+python build_legacy_updater.py
+
+# Output: dist/LeShuffler_Legacy_Updater.exe
+```
 
 **Distribution:** Single exe only (firmware embedded, self-deleting, auto-sets RDP1)
 
 ### Remote Recovery Flasher (for ST-LINK recovery)
 
-```powershell
-cd Tools
-python build_remote_flasher.py
-```
+**Only rebuild when bootloader changes** - bootloader is embedded in exe.
 
-**Output:** `dist/LeShuffler_Remote_Recovery.exe`
+```powershell
+cd Legacy\Tools
+
+# 1. Copy bootloader from manufacturing folder
+copy ..\..\..\Manufacturing\APIC\Test_and_production_firmware\LeShuffler_Bootloader_E.bin .
+
+# 2. Build exe with embedded bootloader
+python build_remote_flasher.py
+
+# Output: dist/LeShuffler_Remote_Recovery.exe
+```
 
 **Do not distribute** - for remote support sessions only.
 

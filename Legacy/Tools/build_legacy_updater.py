@@ -39,7 +39,7 @@ def main():
     else:
         firmware_path = script_dir / "LeShuffler.bin"
 
-    template_path = script_dir / "legacy_usb_updater.py"
+    template_path = script_dir / "LeShuffler_Legacy_Updater.py"
     output_script = script_dir / "_legacy_updater_embedded.py"
 
     print("=" * 60)
